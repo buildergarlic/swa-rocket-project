@@ -35,10 +35,10 @@
 수업 내용은 모두 [`js/data.js`](js/data.js) 한 파일에 있습니다.
 
 - `schools`, `classes`: 학교와 반 (설정 화면에서도 바꿀 수 있음)
-- `parts`: 부품 12개. `company`(업체 이름), `lon`/`lat`(업체 위치), `question`(아이들 조사 질문),
-  `evidence`(근거 자료: `summary`, `source`, `url`)를 채우면 지도와 강사용 화면에 바로 반영됩니다.
+- 부품 12개와 업체·근거 자료는 [`js/parts.js`](js/parts.js)에 있습니다. 수업 자료의 `companies.json`을 고친 뒤
+  `python3 tools/import_companies.py companies.json js/parts.js`로 다시 만듭니다
+  (로켓 그림에서 어느 자리를 맡을지는 스크립트의 `STACK`에서 정합니다).
 - `sheets`, `mustCommon`, `landmarks`: 전지 장별로 꼭 들어갈 내용과 그림
-- `launchSite`: 로켓 발사대 위치 (기본: 사천)
 - `countdown`: 카운트다운 초
 
 지도 경계는 `tools/build_geo.py`로 만든 `js/geo.js`를 씁니다.

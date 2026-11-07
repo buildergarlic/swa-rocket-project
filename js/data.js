@@ -14,8 +14,8 @@ window.ROCKET_DATA = {
 
   countdown: 10, // 발사 카운트다운(초)
 
-  // 로켓 발사대 위치
-  launchSite: { name: '로켓 발사대', region: '사천시', lon: 128.07, lat: 35.05, note: '우주항공청이 있는 사천' },
+  // 로켓 발사대 위치: js/parts.js에서 덮어씁니다.
+  launchSite: { name: '로켓 발사대', region: '사천시', lon: 128.04, lat: 35.06 },
 
   // 전지 나누기: 세로 방향 전지(788×1091mm) 6장을 가로 3장 × 세로 2장으로 깔기
   // 번호는 왼쪽 위부터 1, 2, 3 / 아래 줄 4, 5, 6
@@ -61,34 +61,7 @@ window.ROCKET_DATA = {
     '거제시': ['🌬️ 바람의 언덕', '🚢 조선소'],
   },
 
-  // 로켓 부품 12개 (아래에서 위로 쌓이는 순서)
-  // shape: 로켓 그림에서 맡는 자리 (nozzle, finL, finR, body, band, engine2, avionics, payload, antenna, nose)
-  // lon/lat: 업체 위치(없으면 시군 가운데). company/evidence: 강사용 정답(아이들 화면에서는 숨김)
-  parts: [
-    { no: 1, name: '1단 엔진', shape: 'nozzle', region: '창원시', lon: 128.70, lat: 35.13,
-      question: '창원에서 로켓 엔진을 만드는 회사는 어디일까요?', company: '', evidence: null },
-    { no: 2, name: '왼쪽 날개', shape: 'finL', region: '거창군',
-      question: '거창에 있는 회사 중 단단하고 가벼운 재료를 만드는 곳은?', company: '', evidence: null },
-    { no: 3, name: '오른쪽 날개', shape: 'finR', region: '함양군',
-      question: '함양에서 날개에 쓸 부품을 만들 수 있는 회사는?', company: '', evidence: null },
-    { no: 4, name: '1단 연료 탱크', shape: 'body', region: '밀양시',
-      question: '밀양에서 탱크와 큰 금속 부품을 만드는 회사는?', company: '', evidence: null },
-    { no: 5, name: '1단 산화제 탱크', shape: 'body', region: '창녕군',
-      question: '창녕에서 압력을 견디는 통을 만드는 회사는?', company: '', evidence: null },
-    { no: 6, name: '단 분리 장치', shape: 'band', region: '거제시', lon: 128.69, lat: 34.89,
-      question: '거제에서 큰 구조물을 정밀하게 만드는 회사는?', company: '', evidence: null },
-    { no: 7, name: '2단 엔진', shape: 'engine2', region: '양산시',
-      question: '양산에서 엔진 부품을 만드는 회사는?', company: '', evidence: null },
-    { no: 8, name: '2단 연료 탱크', shape: 'body', region: '진주시',
-      question: '진주에 있는 항공우주 회사나 연구소는 어디일까요?', company: '', evidence: null },
-    { no: 9, name: '유도 컴퓨터', shape: 'avionics', region: '합천군',
-      question: '합천에서 전자 장치를 만드는 회사는?', company: '', evidence: null },
-    { no: 10, name: '인공위성', shape: 'payload', region: '통영시',
-      question: '통영에서 바다를 지켜보는 기술과 관련된 곳은?', company: '', evidence: null },
-    { no: 11, name: '통신 안테나', shape: 'antenna', region: '하동군',
-      question: '하동에서 통신 장비와 관련된 곳은?', company: '', evidence: null },
-    { no: 12, name: '노즈콘(머리 덮개)', shape: 'nose', region: '남해군',
-      question: '남해에서 로켓 머리를 지켜 줄 재료를 만드는 곳은?', company: '', evidence: null },
-  ],
-  // evidence 예시: { summary: '누리호 엔진을 만든 회사', source: '회사 누리집', url: 'https://...' }
+  // 로켓 부품 12개와 발사대 위치는 js/parts.js에 있습니다.
+  // (수업 자료의 companies.json → python3 tools/import_companies.py 로 만듭니다.)
+  parts: [],
 };

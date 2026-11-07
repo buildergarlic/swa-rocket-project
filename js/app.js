@@ -54,7 +54,7 @@
   // ── 부품 버튼 ──
   function renderParts() {
     const a = prog().arrived;
-    $('#partGrid').innerHTML = D.parts.map(p => `
+    $('#partGrid').innerHTML = [...D.parts].sort((x, y) => x.no - y.no).map(p => `
       <button class="part ${a[p.no] ? 'on' : ''}" data-no="${p.no}">
         <span class="no">${p.no}</span>
         <span class="nm">${esc(p.name)}</span>
@@ -178,7 +178,7 @@
     if (dlg.open || document.querySelector('.cinema') || e.target.matches('input, select')) return;
     const keys = '1234567890-=';
     const i = keys.indexOf(e.key);
-    if (i >= 0 && D.parts[i] && $('#view-rocket').classList.contains('active')) document.querySelector(`.part[data-no="${D.parts[i].no}"]`)?.click();
+    if (i >= 0 && $('#view-rocket').classList.contains('active')) document.querySelector(`.part[data-no="${i + 1}"]`)?.click();
     if (e.key === ' ' && !$('#launchBtn').hidden) { e.preventDefault(); launch(); }
   });
 

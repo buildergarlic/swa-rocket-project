@@ -2,7 +2,7 @@
 (function () {
   const NS = 'http://www.w3.org/2000/svg';
   const CX = 210, W = 130, GROUND = 700;
-  const HEIGHTS = { nozzle: 48, body: 100, band: 22, engine2: 34, avionics: 46, payload: 58, nose: 122 };
+  const HEIGHTS = { nozzle: 48, shield: 20, pipes: 30, body: 86, insulation: 22, band: 22, engine2: 34, avionics: 46, panel: 64, payload: 58, nose: 122 };
   const STACK = Object.keys(HEIGHTS);
 
   const el = (tag, attrs = {}, parent) => {
@@ -17,6 +17,8 @@
     <linearGradient id="gRed" x1="0" x2="1"><stop offset="0" stop-color="#8f1d22"/><stop offset=".4" stop-color="#ff5a5f"/><stop offset="1" stop-color="#7d161b"/></linearGradient>
     <linearGradient id="gMetal" x1="0" x2="1"><stop offset="0" stop-color="#2b2e36"/><stop offset=".45" stop-color="#a3a9b5"/><stop offset="1" stop-color="#25282f"/></linearGradient>
     <linearGradient id="gNavy" x1="0" x2="1"><stop offset="0" stop-color="#0d1b33"/><stop offset=".45" stop-color="#2f5590"/><stop offset="1" stop-color="#0d1b33"/></linearGradient>
+    <linearGradient id="gGold" x1="0" x2="1"><stop offset="0" stop-color="#7a4a10"/><stop offset=".45" stop-color="#ffd27a"/><stop offset="1" stop-color="#6b3f0c"/></linearGradient>
+    <linearGradient id="gFrost" x1="0" x2="1"><stop offset="0" stop-color="#9fb8cf"/><stop offset=".45" stop-color="#f3f9ff"/><stop offset="1" stop-color="#90a8bf"/></linearGradient>
     <linearGradient id="gGray" x1="0" x2="1"><stop offset="0" stop-color="#5d6472"/><stop offset=".45" stop-color="#d9dde6"/><stop offset="1" stop-color="#555b68"/></linearGradient>`;
 
   // 부품마다 [윤곽선, 그림 그리기 함수]를 만듭니다.
@@ -37,6 +39,7 @@
     parts.forEach(p => {
       const base = firstBody || { y0: GROUND - 48, y1: GROUND - 148 };
       if (p.shape === 'finL' || p.shape === 'finR') slots[p.no] = { base, side: p.shape === 'finL' ? -1 : 1 };
+      if (p.shape === 'fins') slots[p.no] = { base, side: 0 };
       if (p.shape === 'antenna') slots[p.no] = { base: avionics || payload || base };
     });
     return { slots, top };
@@ -48,6 +51,12 @@
       case 'nozzle': return `M${CX - 36},${s.y1} L${CX + 36},${s.y1} L${CX + 56},${s.y0} L${CX - 56},${s.y0}Z`;
       case 'nose': return `M${x0},${s.y0} C${x0},${s.y0 - 60} ${CX - 32},${s.y1 + 18} ${CX},${s.y1} C${CX + 32},${s.y1 + 18} ${x1},${s.y0 - 60} ${x1},${s.y0}Z`;
       case 'band': return `M${x0 - 3},${s.y1} H${x1 + 3} V${s.y0} H${x0 - 3}Z`;
+      case 'shield': return `M${x0 - 10},${s.y1} H${x1 + 10} L${x1 - 4},${s.y0} H${x0 + 4}Z`;
+      case 'pipes': return `M${x0 + 8},${s.y1} H${x1 - 8} V${s.y0} H${x0 + 8}Z`;
+      case 'fins': {
+        const b = s.base, f = d => { const bx = CX + d * W / 2; return `M${bx},${b.y1 + 8} L${bx + d * 62},${b.y0 + 4} L${bx + d * 62},${b.y0 + 44} L${bx},${b.y0 + 8}Z`; };
+        return f(-1) + ' ' + f(1);
+      }
       case 'finL': case 'finR': {
         const d = s.side, bx = CX + d * W / 2, b = s.base;
         return `M${bx},${b.y1 + 8} L${bx + d * 62},${b.y0 + 4} L${bx + d * 62},${b.y0 + 44} L${bx},${b.y0 + 8}Z`;
@@ -62,6 +71,7 @@
 
   function center(p, s) {
     if (p.shape === 'finL' || p.shape === 'finR') return [CX + s.side * (W / 2 + 34), s.base.y0 + 18];
+    if (p.shape === 'fins') return [CX - W / 2 - 34, s.base.y0 + 18];
     if (p.shape === 'antenna') { const ym = (s.base.y0 + s.base.y1) / 2; return [CX - W / 2 - 34, ym - 30]; }
     if (p.shape === 'nose') return [CX, s.y0 - 46];
     return [CX, (s.y0 + s.y1) / 2];
@@ -70,7 +80,7 @@
   function drawPiece(g, p, s) {
     const x0 = CX - W / 2;
     const d = outline(p, s);
-    const fill = { nozzle: 'url(#gMetal)', nose: 'url(#gRed)', finL: 'url(#gRed)', finR: 'url(#gRed)', band: 'url(#gNavy)', engine2: 'url(#gGray)', avionics: 'url(#gGray)', antenna: 'url(#gGray)' }[p.shape] || 'url(#gWhite)';
+    const fill = { nozzle: 'url(#gMetal)', nose: 'url(#gRed)', finL: 'url(#gRed)', finR: 'url(#gRed)', fins: 'url(#gRed)', shield: 'url(#gGold)', pipes: '#2b2f3a', insulation: 'url(#gFrost)', panel: 'url(#gWhite)', band: 'url(#gNavy)', engine2: 'url(#gGray)', avionics: 'url(#gGray)', antenna: 'url(#gGray)' }[p.shape] || 'url(#gWhite)';
     el('path', { d, fill, stroke: '#0d1b33', 'stroke-width': 1.5 }, g);
     if (p.shape === 'body') {
       // 탱크마다 무늬를 다르게
@@ -84,6 +94,16 @@
         const t = el('text', { x: CX, y: s.y1 + s.h * 0.24, 'font-size': 26, 'font-weight': 900, fill: '#c1121f', 'text-anchor': 'middle', 'dominant-baseline': 'middle' }, g);
         t.textContent = '경남호';
       }
+    }
+    if (p.shape === 'pipes') {
+      for (let i = 0; i < 5; i++) el('rect', { x: x0 + 18 + i * 21, y: s.y1, width: 8, height: s.h, rx: 3, fill: i % 2 ? '#c0c6d2' : '#e3a33b' }, g);
+      el('rect', { x: x0 + 10, y: s.y1 + s.h / 2 - 3, width: W - 20, height: 6, fill: '#8d939f' }, g);
+    }
+    if (p.shape === 'shield') el('path', { d: `M${x0 - 6},${s.y1 + 6} H${x0 + W + 6}`, stroke: '#fff6', 'stroke-width': 3 }, g);
+    if (p.shape === 'insulation') for (let i = 0; i < 9; i++) el('path', { d: `M${x0 + i * 16},${s.y0} l14,${-s.h}`, stroke: '#b9d7ef', 'stroke-width': 4 }, g);
+    if (p.shape === 'panel') {
+      el('path', { d: `M${x0},${(s.y0 + s.y1) / 2} H${x0 + W} M${CX},${s.y1} V${s.y0} M${x0 + W / 4},${s.y1} V${s.y0} M${x0 + W * 3 / 4},${s.y1} V${s.y0}`, stroke: '#8790a3', 'stroke-width': 1.5 }, g);
+      for (let i = 0; i < 8; i++) el('circle', { cx: x0 + 8 + i * 16, cy: s.y1 + 6, r: 2, fill: '#6b7385' }, g);
     }
     if (p.shape === 'band') for (let i = 0; i < 6; i++) el('circle', { cx: x0 + 12 + i * 21, cy: (s.y0 + s.y1) / 2, r: 3, fill: '#c9d3e6' }, g);
     if (p.shape === 'engine2') el('path', { d: `M${CX - 14},${s.y1 + 6} H${CX + 14} L${CX + 24},${s.y0 - 3} H${CX - 24}Z`, fill: 'url(#gMetal)' }, g);
@@ -128,7 +148,8 @@
       const pieces = el('g', {}, svg);
       this.pieces = {};
       // 날개·안테나가 몸통 뒤로 가도록 먼저 그립니다.
-      const order = [...parts].sort((a, b) => (['finL', 'finR', 'antenna'].includes(b.shape) ? 1 : 0) - (['finL', 'finR', 'antenna'].includes(a.shape) ? 1 : 0));
+      const back = ['finL', 'finR', 'fins', 'antenna'];
+      const order = [...parts].sort((a, b) => (back.includes(b.shape) ? 1 : 0) - (back.includes(a.shape) ? 1 : 0));
       order.forEach(p => {
         const s = slots[p.no];
         if (!s) return;

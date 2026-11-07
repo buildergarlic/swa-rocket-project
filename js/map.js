@@ -171,12 +171,14 @@
       const sheet = this.sheet;
       const answer = m => {
         if (!st.teacher) return '';
-        if (!m.company && !m.evidence) return `<div class="answer">📌 업체와 근거 자료가 아직 입력되지 않았어요 (js/data.js)</div>`;
+        if (!m.company) return `<div class="answer">📌 업체와 근거 자료가 아직 입력되지 않았어요</div>`;
         const ev = m.evidence || {};
-        return `<div class="answer"><b>🏢 ${esc(m.company)}</b>${ev.summary ? `<br>${esc(ev.summary)}` : ''}${ev.source ? `<br>출처: ${esc(ev.source)}` : ''}${ev.url ? `<br><a href="${esc(ev.url)}" target="_blank" rel="noopener">${esc(ev.url)}</a>` : ''}</div>`;
+        const srcs = (ev.sources || (ev.url ? [{ name: ev.source || ev.url, url: ev.url }] : []))
+          .map(x => `<br>📎 <a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.name || x.url)}</a>`).join('');
+        return `<div class="answer"><b>🏢 ${esc(m.company)}</b>${m.type ? ` <span class="muted">· ${esc(m.type)}</span>` : ''}${m.place ? `<br>📍 ${esc(m.place)}` : ''}${m.hint ? `<br>💡 힌트: ${esc(m.hint)}` : ''}${ev.summary ? `<br>${esc(ev.summary)}` : ''}${srcs}</div>`;
       };
       const mission = m => `<li class="mission ${st.arrived[m.no] ? 'done' : ''}"><span class="badge">${st.arrived[m.no] ? '✓' : m.no}</span>
-        <div><b>${esc(m.name)}</b> · ${esc(m.region)} <span class="muted">(${m.sheet}번 장)</span><br><span class="muted">🔎 ${esc(m.question)}</span>${answer(m)}</div></li>`;
+        <div><b>${esc(m.name)}</b> · ${esc(m.region)} <span class="muted">(${m.sheet}번 장)</span>${m.kidRole ? `<br>${esc(m.kidRole)}` : ''}<br><span class="muted">🔎 ${esc(m.question)}</span>${answer(m)}</div></li>`;
 
       if (!sheet) {
         this.panel.innerHTML = `
@@ -184,7 +186,7 @@
           <p class="muted">전지 ${data.grid.cols * data.grid.rows}장(세로 ${data.grid.sheetW}×${data.grid.sheetH}mm)을 가로 ${data.grid.cols}장 × 세로 ${data.grid.rows}장으로 깔면 경남 전체 지도가 됩니다. 축척은 약 1:${Math.round(1e6 / this.scale).toLocaleString()} (1km ≈ ${this.scale.toFixed(1)}mm)입니다. 맡은 장을 눌러 자세히 보세요.</p>
           <div class="sheet-buttons">${this.sheetInfo.map(s => `<button data-sheet="${s.no}" style="background:${s.color}">${s.no}번<br><small>${esc(s.name)}</small></button>`).join('')}</div>
           <h3>🚚 부품 업체 찾기 미션 (${data.parts.length}곳)</h3>
-          <ul>${this.markers.map(mission).join('')}</ul>
+          <ul>${[...this.markers].sort((a, b) => a.no - b.no).map(mission).join('')}</ul>
           <p class="muted">🚀 ${esc(data.launchSite.name)}: ${esc(data.launchSite.region)} (${this.launch.sheet}번 장)</p>
           <p class="muted">지도 경계: ${esc(this.geo.source)}</p>`;
       } else {
