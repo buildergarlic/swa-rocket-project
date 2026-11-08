@@ -59,6 +59,7 @@ const fs = require('fs');
         while (runs.length && runs[0].t.trim() === '' ) runs.shift();
         if (runs.length) runs[0].t = runs[0].t.replace(/^[\s\v]+/, '');
         if (runs.length) runs[runs.length-1].t = runs[runs.length-1].t.replace(/\s+$/, '');
+        if (runs.filter(r => r.s).every(r => r.f === 'Montserrat')) continue;
         const rng = document.createRange(); rng.selectNodeContents(el); const tr = rng.getBoundingClientRect();
         res.push({x: tr.left, y: tr.top, w: tr.width, h: tr.height, bx: r.left, bw: r.width, align: cs.textAlign, lh: cs.lineHeight === 'normal' ? 1.4 : parseFloat(cs.lineHeight) / parseFloat(cs.fontSize), ls: cs.letterSpacing, runs});
         el.style.setProperty('color', 'transparent', 'important');

@@ -68,8 +68,8 @@ def flush():
 for n in sorted(out):
     for r in out[n]:
         l = len(json.dumps(r, ensure_ascii=False, separators=(',', ':')))
-        if size + l > 36000 and 'createSlide' in r: flush()
-        if size + l > 42000: flush()
+        if size + l > 24000 and 'createSlide' in r: flush()
+        if size + l > 30000: flush()
         cur.append(r); size += l
 flush()
 print('batches', bi)
