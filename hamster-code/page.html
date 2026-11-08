@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>햄스터봇 택배 코딩</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<link rel="stylesheet" href="page.css">
+</head>
+<body>
+<div id="root"></div>
+<script src="blocks.js"></script>
+<script src="draw.js"></script>
+<script src="pages.js"></script>
+<script>
+(async function () {
+  const id = new URLSearchParams(location.search).get('p') || '01';
+  const root = document.getElementById('root');
+  const build = () => {
+    POST.length = 0;
+    root.innerHTML = '';
+    root.appendChild(PAGES[id]());
+    POST.forEach(f => f());
+  };
+  try {
+    build();                         // 1차: 쓰인 글자의 글꼴 조각을 불러오게 함
+    await document.fonts.ready;
+    await new Promise(r => setTimeout(r, 150));
+    await document.fonts.ready;
+    build();                         // 2차: 글꼴이 다 온 뒤 다시 재서 그림
+    await document.fonts.ready;
+    window.READY = true;
+  } catch (e) {
+    window.ERR = String(e && e.stack || e);
+  }
+})();
+</script>
+</body>
+</html>

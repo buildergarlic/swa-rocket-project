@@ -1,0 +1,7 @@
+@import url('nanum/700.css');
+@import url('nanum/800.css');
+@import url('jua/400.css');
+@font-face { font-family: 'Pretendard'; font-weight: 400; src: url('pretendard/Pretendard-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Pretendard'; font-weight: 600; src: url('pretendard/Pretendard-SemiBold.woff2') format('woff2'); }
+@font-face { font-family: 'Pretendard'; font-weight: 700; src: url('pretendard/Pretendard-Bold.woff2') format('woff2'); }
+@font-face { font-family: 'Pretendard'; font-weight: 800; src: url('pretendard/Pretendard-ExtraBold.woff2') format('woff2'); }
