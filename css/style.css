@@ -6,7 +6,7 @@
   --ink: #5a4636;
   --line: #5a4636;
   --text: #5a4636;
-  --muted: #9b8574;
+  --muted: #6e5b4c;
   --accent: #ff8fa3;
   --pink: #ffc8d6;
   --sky: #bfe6ff;
@@ -16,7 +16,9 @@
   --ok: #7fd6a8;
   --red: #ff6f7d;
   --shadow: 0 5px 0 var(--ink);
-  font-family: "Jua", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  /* 본문·부품 글자는 또렷한 고딕체, 제목만 둥근 주아체 */
+  font-family: "Noto Sans KR", "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", sans-serif;
+  --round: "Jua", "Malgun Gothic", sans-serif;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -25,7 +27,8 @@ body { background-color: var(--bg);
   background-image: radial-gradient(#ffd9e3 2px, transparent 2.5px), radial-gradient(#d4ecff 2px, transparent 2.5px);
   background-size: 34px 34px; background-position: 0 0, 17px 17px; }
 button { font: inherit; color: inherit; cursor: pointer; border: 0; }
-b, strong, h1, h2, h3 { font-weight: 400; }
+.brand, .banner, .launch-btn, .progress-text, .pc-no, .pc-name, .map-panel h2, .map-panel h3, .settings h2, .settings legend, .tabs button, .num-input, .rec-count { font-family: var(--round); font-weight: 400; }
+.classes button, .tools button, .settings button, .map-nav button, .cine-actions button, .cine-hold { font-weight: 700; }
 
 /* 말랑한 스티커 버튼 */
 .tabs button, .classes button, .tools button, .settings button, .map-nav button, .cine-actions button {
@@ -47,7 +50,7 @@ b, strong, h1, h2, h3 { font-weight: 400; }
 .tabs button, .classes button, .tools button { padding: 9px 16px; font-size: 22px; }
 .tabs button.active { background: var(--butter); }
 .classes button { font-size: 19px; padding: 6px 14px; line-height: 1.15; background: #fff; }
-.classes button small { display: block; font-size: 15px; color: var(--muted); }
+.classes button small { display: block; font-size: 15px; color: var(--muted); font-weight: 600; }
 .classes button.active { background: var(--pink); }
 .classes button.active small { color: var(--ink); }
 .tools button.on { background: var(--red); color: #fff; }
@@ -71,9 +74,9 @@ main { height: calc(100% - 84px); }
 .stars i { position: absolute; color: #ffe36e; font-style: normal; font-size: 26px; text-shadow: 0 0 0 var(--ink);
   -webkit-text-stroke: 2px var(--ink); animation: twinkle 2.4s ease-in-out infinite; }
 @keyframes twinkle { 50% { transform: scale(.6) rotate(20deg); opacity: .6; } }
-#rocketSvg { position: absolute; inset: 10px 0 0 0; width: 100%; height: calc(100% - 10px); font-family: Jua, sans-serif; }
+#rocketSvg { position: absolute; inset: 10px 0 0 0; width: 100%; height: calc(100% - 10px); }
 .ghost { fill: rgba(255,255,255,0.55); stroke: var(--ink); stroke-width: 3; stroke-dasharray: 9 7; stroke-linecap: round; opacity: .75; }
-.ghost-num { fill: var(--ink); text-anchor: middle; dominant-baseline: middle; paint-order: stroke; stroke: #fff; stroke-width: 4px; }
+.ghost-num { font-weight: 900; fill: #3b2c20; text-anchor: middle; dominant-baseline: middle; paint-order: stroke; stroke: #fff; stroke-width: 4px; }
 .ghost-tile { fill: none; stroke: #9b8574; stroke-width: 1.5; stroke-dasharray: 4 5; opacity: .7; }
 .base { opacity: 1; }
 .payload-base { opacity: 0; transform: translateY(-260px); transition: transform 1.4s cubic-bezier(.3,1.2,.4,1), opacity .6s; }
@@ -123,22 +126,22 @@ main { height: calc(100% - 84px); }
   transition: transform .08s, box-shadow .08s; }
 .part:nth-child(4n+1) { background: #fff3f6; } .part:nth-child(4n+2) { background: #f1f9ff; }
 .part:nth-child(4n+3) { background: #fffbea; } .part:nth-child(4n) { background: #f6f2ff; }
-.part .no { position: absolute; right: 10px; top: 6px; font-size: 28px; color: var(--accent); }
-.part .nm { font-size: 22px; line-height: 1.2; }
-.part .rg { font-size: 17px; color: var(--muted); }
-.part .st { font-size: 16px; margin-top: 4px; color: var(--muted); }
+.part .no { position: absolute; right: 10px; top: 6px; font-size: 28px; font-weight: 900; color: #e8456b; }
+.part .nm { word-break: keep-all; font-size: 22px; font-weight: 800; line-height: 1.2; color: #3b2c20; }
+.part .rg { font-size: 17px; font-weight: 600; color: var(--muted); }
+.part .st { font-size: 16px; font-weight: 600; margin-top: 4px; color: var(--muted); }
 .part.on { background: var(--mint) !important; }
-.part.on::after { content: '도착!'; position: absolute; right: 4px; bottom: 4px; transform: rotate(-12deg);
+.part.on::after { content: '도착!'; font-family: var(--round); position: absolute; right: 4px; bottom: 4px; transform: rotate(-12deg);
   font-size: 14px; color: #fff; background: #ff6f91; border: 2px solid var(--ink); border-radius: 10px; padding: 1px 6px; }
 .part.on .st { color: #2f8a5c; }
-.hint { margin: 0; color: var(--muted); font-size: 17px; }
+.hint { margin: 0; color: var(--muted); font-size: 17px; font-weight: 600; }
 
 /* ── 경남 지도 ── */
 .map-wrap { position: relative; flex: 1.5; background: #cdeeff; }
-#mapSvg { width: 100%; height: 100%; display: block; font-family: Jua, sans-serif; }
+#mapSvg { width: 100%; height: 100%; display: block; }
 .map-nav { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; gap: 10px; }
 .map-nav button { padding: 10px 18px; font-size: 21px; }
-.map-panel { flex: 1; background: #fffdf8; border-left: 4px solid var(--ink); padding: 18px 20px; overflow-y: auto; font-size: 20px; min-width: 0; }
+.map-panel { flex: 1; background: #fffdf8; border-left: 4px solid var(--ink); padding: 18px 20px; overflow-y: auto; font-size: 20px; font-weight: 500; min-width: 0; }
 .map-panel h2 { margin: 0 0 6px; font-size: 32px; }
 .map-panel h3 { margin: 20px 0 8px; font-size: 24px; color: #ff6f91; }
 .map-panel ul { margin: 0; padding-left: 0; list-style: none; }
@@ -155,15 +158,15 @@ main { height: calc(100% - 84px); }
 .sheet-buttons button { padding: 12px 6px; border-radius: 18px; font-size: 22px; color: var(--ink); border: 3px solid var(--ink); box-shadow: 0 4px 0 var(--ink); }
 
 .region { stroke: var(--ink); stroke-width: 0.35; stroke-linejoin: round; }
-.region-label { fill: var(--ink); text-anchor: middle; paint-order: stroke; stroke: #ffffffdd; }
+.region-label { font-weight: 900; fill: #3b2c20; text-anchor: middle; paint-order: stroke; stroke: #ffffffdd; }
 .neighbor { fill: #e8dfd4; stroke: #b9a898; stroke-width: 0.3; }
 .sheet-line { fill: none; stroke: #ff6f91; stroke-dasharray: 2 1.4; }
 .sheet-hit { fill: transparent; cursor: pointer; }
 .sheet-hit:hover { fill: #ffffff40; }
-.sheet-num { fill: #ff6f91; stroke: #fff; paint-order: stroke; text-anchor: middle; pointer-events: none; }
+.sheet-num { font-weight: 900; fill: #ff6f91; stroke: #fff; paint-order: stroke; text-anchor: middle; pointer-events: none; }
 .grid10 { stroke: #5a463640; }
 .marker circle { stroke: var(--ink); }
-.marker text { text-anchor: middle; dominant-baseline: central; fill: var(--ink); }
+.marker text { font-weight: 900; text-anchor: middle; dominant-baseline: central; fill: var(--ink); }
 
 /* ── 설정 ── */
 dialog { border: 4px solid var(--ink); border-radius: 28px; padding: 0; background: #fffdf8; color: var(--text);
@@ -205,10 +208,10 @@ dialog::backdrop { background: #5a463666; }
   transform: translateX(calc(-100% - 40px)) rotate(-3deg); opacity: 0; transition: transform .55s cubic-bezier(.2,1.5,.4,1), opacity .3s; pointer-events: none; }
 .part-card.show { transform: rotate(-1.5deg); opacity: 1; }
 .pc-no { flex: none; width: 90px; height: 90px; border-radius: 50%; background: var(--butter); border: 4px solid var(--ink); color: var(--ink); font-size: 46px; display: grid; place-items: center; }
-.pc-zone { color: #ff6f91; font-size: 19px; }
+.pc-zone { color: #e8456b; font-size: 19px; font-weight: 700; }
 .pc-name { font-size: 36px; line-height: 1.2; }
-.pc-role { font-size: 21px; margin-top: 4px; }
-.pc-where { font-size: 18px; color: var(--muted); margin-top: 6px; }
+.pc-role { font-size: 21px; font-weight: 600; margin-top: 4px; }
+.pc-where { font-size: 18px; font-weight: 600; color: var(--muted); margin-top: 6px; }
 .sat-load { position: absolute; left: 50%; top: -120px; font-size: 90px; transform: translateX(-50%); opacity: 0; pointer-events: none; z-index: 3; }
 .sat-load.go { animation: satdrop 1.8s cubic-bezier(.3,.9,.4,1) forwards; }
 @keyframes satdrop { 0% { top: -120px; opacity: 1; transform: translateX(-50%) scale(1.4) rotate(-20deg); } 80% { opacity: 1; } 100% { top: 30%; opacity: 0; transform: translateX(-50%) scale(.3) rotate(0); } }
@@ -220,9 +223,9 @@ dialog::backdrop { background: #5a463666; }
 .part-grid.many { grid-template-columns: repeat(6, 1fr); gap: 8px; }
 .part-grid.many .part { padding: 3px 7px; border-radius: 14px; border-width: 3px; box-shadow: 0 3px 0 var(--ink); }
 .part-grid.many .part .no { position: static; font-size: 22px; line-height: 1.05; }
-.part-grid.many .part .nm { font-size: 15px; line-height: 1.15; max-height: 2.3em; overflow: hidden; }
-.part-grid.many .part .rg { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.part-grid.many .part .st { font-size: 12.5px; margin-top: 1px; }
+.part-grid.many .part .nm { font-size: 16px; line-height: 1.2; word-break: keep-all; max-height: 2.4em; overflow: hidden; letter-spacing: -0.3px; }
+.part-grid.many .part .rg { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.part-grid.many .part .st { font-size: 13.5px; margin-top: 1px; }
 .cine-hold { position: absolute; right: 86px; top: 18px; height: 54px; padding: 0 18px; border-radius: 27px; background: #fff; color: var(--ink); border: 3px solid var(--ink); font-size: 19px; opacity: .6; }
 .cine-hold:hover { opacity: 1; }
 .rec-count { font-size: 30px; color: #ff6f91; }
