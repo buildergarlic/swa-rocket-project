@@ -42,6 +42,14 @@ bp=[p for p in (bu.geoms if isinstance(bu,MultiPolygon) else [bu]) if p.area>0.6
 bu=MultiPolygon(bp) if len(bp)>1 else bp[0]
 bc=max(bp,key=lambda p:p.area).representative_point()
 neighbors=[{'name':'부산광역시','d':path(bu,0.12),'x':round(bc.x-minx,1),'y':round(bc.y-miny,1)}]
+# 실제 발사장(나로우주센터)이 있는 전남 고흥군도 지도 밖 참고용으로 넣습니다.
+for f in d['features']:
+    if f['properties']['name']=='고흥군':
+        gh=transform(proj, shape(f['geometry']).buffer(0)).buffer(0.01).buffer(-0.01)
+        gp=[p for p in (gh.geoms if isinstance(gh,MultiPolygon) else [gh]) if p.area>0.6]
+        gh=MultiPolygon(gp) if len(gp)>1 else gp[0]
+        gc=max(gp,key=lambda p:p.area).representative_point()
+        neighbors.append({'name':'전남 고흥군','d':path(gh,0.12),'x':round(gc.x-minx,1),'y':round(gc.y-miny,1)})
 for n,u in regs:
     rp=u.representative_point()
     # 가장 큰 조각의 중심을 이름 위치로

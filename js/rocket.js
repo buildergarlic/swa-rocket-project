@@ -1,185 +1,257 @@
-// 조립 화면의 로켓 그림: 부품마다 점선 자리(빈칸)와 실제 부품을 그립니다.
+// 조립 화면의 로켓 그림.
+// 완성된 로켓 그림을 한 장 그려 두고, 부품마다 그 그림의 한 조각(구역을 나눈 조각)만 보이게 합니다.
+// 그래서 부품 수가 12개든 36개든 데이터(js/parts.js)의 zone만 정하면 알맞게 나눠 붙습니다.
 (function () {
   const NS = 'http://www.w3.org/2000/svg';
-  const CX = 210, W = 130, GROUND = 700;
-  const HEIGHTS = { nozzle: 48, shield: 20, pipes: 30, body: 86, insulation: 22, band: 22, engine2: 34, avionics: 46, panel: 64, payload: 58, nose: 122 };
-  const STACK = Object.keys(HEIGHTS);
+  const CX = 210, W = 130, X0 = CX - W / 2, X1 = CX + W / 2, GROUND = 700;
+  const FULL_VB = [0, 0, 420, 775];
 
-  const el = (tag, attrs = {}, parent) => {
+  // 로켓 구역(위 → 아래). y0: 위쪽, y1: 아래쪽
+  const ZONES = {
+    fairing: { name: '페어링(머리 덮개)', y0: 70, y1: 190 },
+    payload: { name: '인공위성 칸', y0: 190, y1: 250 },
+    avionics: { name: '전자장비·유도', y0: 250, y1: 320 },
+    tank2: { name: '2단 탱크', y0: 320, y1: 420 },
+    engine2: { name: '2단 엔진', y0: 420, y1: 470 },
+    interstage: { name: '단 연결부', y0: 470, y1: 495 },
+    tank1: { name: '1단 탱크', y0: 495, y1: 605 },
+    engine: { name: '엔진 계통', y0: 605, y1: 650 },
+    nozzle: { name: '1단 엔진', y0: 650, y1: 700 },
+    fins: { name: '날개', y0: 545, y1: 690 },
+  };
+  const Z = ZONES;
+  // 예전 데이터의 shape 값 → 구역
+  const SHAPE_ZONE = {
+    nozzle: 'nozzle', shield: 'engine', pipes: 'engine', engine: 'engine', insulation: 'tank1', band: 'interstage',
+    engine2: 'engine2', avionics: 'avionics', panel: 'avionics', antenna: 'avionics', payload: 'payload',
+    nose: 'fairing', fins: 'fins', finL: 'fins', finR: 'fins',
+  };
+  const zoneOf = (p, bodyIdx) => p.zone || SHAPE_ZONE[p.shape] || (bodyIdx < 2 ? 'tank1' : 'tank2');
+
+  const el = (tag, attrs = {}, parent, text) => {
     const e = document.createElementNS(NS, tag);
     for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
     if (parent) parent.appendChild(e);
     return e;
   };
 
-  const DEFS = `
-    <linearGradient id="gWhite" x1="0" x2="1"><stop offset="0" stop-color="#9aa3b5"/><stop offset=".35" stop-color="#fff"/><stop offset=".6" stop-color="#f4f6fb"/><stop offset="1" stop-color="#8790a3"/></linearGradient>
-    <linearGradient id="gRed" x1="0" x2="1"><stop offset="0" stop-color="#8f1d22"/><stop offset=".4" stop-color="#ff5a5f"/><stop offset="1" stop-color="#7d161b"/></linearGradient>
-    <linearGradient id="gMetal" x1="0" x2="1"><stop offset="0" stop-color="#2b2e36"/><stop offset=".45" stop-color="#a3a9b5"/><stop offset="1" stop-color="#25282f"/></linearGradient>
-    <linearGradient id="gNavy" x1="0" x2="1"><stop offset="0" stop-color="#0d1b33"/><stop offset=".45" stop-color="#2f5590"/><stop offset="1" stop-color="#0d1b33"/></linearGradient>
-    <linearGradient id="gGold" x1="0" x2="1"><stop offset="0" stop-color="#7a4a10"/><stop offset=".45" stop-color="#ffd27a"/><stop offset="1" stop-color="#6b3f0c"/></linearGradient>
-    <linearGradient id="gFrost" x1="0" x2="1"><stop offset="0" stop-color="#9fb8cf"/><stop offset=".45" stop-color="#f3f9ff"/><stop offset="1" stop-color="#90a8bf"/></linearGradient>
-    <linearGradient id="gGray" x1="0" x2="1"><stop offset="0" stop-color="#5d6472"/><stop offset=".45" stop-color="#d9dde6"/><stop offset="1" stop-color="#555b68"/></linearGradient>`;
+  const NOSE = `M${X0},${Z.fairing.y1} C${X0},${Z.fairing.y1 - 62} ${CX - 32},${Z.fairing.y0 + 18} ${CX},${Z.fairing.y0} C${CX + 32},${Z.fairing.y0 + 18} ${X1},${Z.fairing.y1 - 62} ${X1},${Z.fairing.y1}Z`;
+  const FIN_L = `M${X0},${Z.fins.y0} L${X0 - 58},${Z.fins.y1 - 50} L${X0 - 58},${Z.fins.y1} L${X0},${Z.fins.y1 - 28}Z`;
+  const FIN_R = `M${X1},${Z.fins.y0} L${X1 + 58},${Z.fins.y1 - 50} L${X1 + 58},${Z.fins.y1} L${X1},${Z.fins.y1 - 28}Z`;
+  const NOZZLE = `M${CX - 40},${Z.nozzle.y0} H${CX + 40} L${CX + 58},${Z.nozzle.y1} H${CX - 58}Z`;
+  const rect = (z, extra = '') => `<rect x="${X0}" y="${Z[z].y0}" width="${W}" height="${Z[z].y1 - Z[z].y0}" ${extra}/>`;
+  const mid = z => (Z[z].y0 + Z[z].y1) / 2;
 
-  // 부품마다 [윤곽선, 그림 그리기 함수]를 만듭니다.
-  function layout(parts) {
-    let y = GROUND;
-    const slots = {};
-    let firstBody = null, avionics = null, payload = null, bodyCount = 0;
-    parts.forEach(p => {
-      if (!STACK.includes(p.shape)) return;
-      const h = HEIGHTS[p.shape];
-      slots[p.no] = { y0: y, y1: y - h, h };
-      if (p.shape === 'body') { bodyCount++; slots[p.no].idx = bodyCount; if (!firstBody) firstBody = slots[p.no]; }
-      if (p.shape === 'avionics') avionics = slots[p.no];
-      if (p.shape === 'payload') payload = slots[p.no];
-      y -= h;
-    });
-    const top = y;
-    parts.forEach(p => {
-      const base = firstBody || { y0: GROUND - 48, y1: GROUND - 148 };
-      if (p.shape === 'finL' || p.shape === 'finR') slots[p.no] = { base, side: p.shape === 'finL' ? -1 : 1 };
-      if (p.shape === 'fins') slots[p.no] = { base, side: 0 };
-      if (p.shape === 'antenna') slots[p.no] = { base: avionics || payload || base };
-    });
-    return { slots, top };
+  // 완성된 로켓 그림(조각들이 이 그림을 나눠 가짐)
+  const ART = `
+    <defs>
+      <linearGradient id="gWhite" x1="0" x2="1"><stop offset="0" stop-color="#9aa3b5"/><stop offset=".35" stop-color="#fff"/><stop offset=".6" stop-color="#f4f6fb"/><stop offset="1" stop-color="#8790a3"/></linearGradient>
+      <linearGradient id="gRed" x1="0" x2="1"><stop offset="0" stop-color="#8f1d22"/><stop offset=".4" stop-color="#ff5a5f"/><stop offset="1" stop-color="#7d161b"/></linearGradient>
+      <linearGradient id="gMetal" x1="0" x2="1"><stop offset="0" stop-color="#2b2e36"/><stop offset=".45" stop-color="#a3a9b5"/><stop offset="1" stop-color="#25282f"/></linearGradient>
+      <linearGradient id="gNavy" x1="0" x2="1"><stop offset="0" stop-color="#0d1b33"/><stop offset=".45" stop-color="#2f5590"/><stop offset="1" stop-color="#0d1b33"/></linearGradient>
+      <linearGradient id="gGray" x1="0" x2="1"><stop offset="0" stop-color="#5d6472"/><stop offset=".45" stop-color="#d9dde6"/><stop offset="1" stop-color="#555b68"/></linearGradient>
+      <linearGradient id="gGold" x1="0" x2="1"><stop offset="0" stop-color="#7a4a10"/><stop offset=".45" stop-color="#ffd27a"/><stop offset="1" stop-color="#6b3f0c"/></linearGradient>
+      <radialGradient id="gGlow"><stop offset="0" stop-color="#fff6c2" stop-opacity=".9"/><stop offset="1" stop-color="#ffcf3f" stop-opacity="0"/></radialGradient>
+      <g id="rocketArt">
+        <path d="${FIN_L}" fill="url(#gRed)" stroke="#0d1b33" stroke-width="1.5"/>
+        <path d="${FIN_R}" fill="url(#gRed)" stroke="#0d1b33" stroke-width="1.5"/>
+        <path d="${NOZZLE}" fill="url(#gMetal)" stroke="#0d1b33" stroke-width="1.5"/>
+        <rect x="${CX - 46}" y="${Z.nozzle.y0}" width="92" height="7" fill="url(#gGold)"/>
+        ${rect('engine', 'fill="#2b2f3a"')}
+        ${[0, 1, 2, 3, 4].map(i => `<rect x="${X0 + 20 + i * 21}" y="${Z.engine.y0}" width="8" height="${Z.engine.y1 - Z.engine.y0}" rx="3" fill="${i % 2 ? '#c0c6d2' : '#e3a33b'}"/>`).join('')}
+        <rect x="${X0 + 8}" y="${mid('engine') - 3}" width="${W - 16}" height="6" fill="#8d939f"/>
+        ${rect('tank1', 'fill="url(#gWhite)" stroke="#0d1b33" stroke-width="1.5"')}
+        <rect x="${X0}" y="${Z.tank1.y0 + 62}" width="${W}" height="12" fill="url(#gNavy)"/>
+        <rect x="${X0}" y="${Z.tank1.y1 - 10}" width="${W}" height="8" fill="url(#gNavy)"/>
+        <text x="${CX}" y="${Z.tank1.y0 + 42}" font-size="30" font-weight="900" fill="#c1121f" text-anchor="middle">경남호</text>
+        <text x="${CX}" y="${Z.tank1.y0 + 96}" font-size="15" font-weight="900" fill="#1d3557" text-anchor="middle">KOREA</text>
+        ${rect('interstage', 'fill="url(#gNavy)"')}
+        ${[0, 1, 2, 3, 4, 5].map(i => `<circle cx="${X0 + 12 + i * 21}" cy="${mid('interstage')}" r="3" fill="#c9d3e6"/>`).join('')}
+        ${rect('engine2', 'fill="url(#gGray)"')}
+        <path d="M${CX - 16},${Z.engine2.y0 + 6} H${CX + 16} L${CX + 28},${Z.engine2.y1 - 4} H${CX - 28}Z" fill="url(#gMetal)"/>
+        <rect x="${X0 + 10}" y="${Z.engine2.y0 + 12}" width="18" height="18" rx="4" fill="#3a3f4c"/><rect x="${X1 - 28}" y="${Z.engine2.y0 + 12}" width="18" height="18" rx="4" fill="#3a3f4c"/>
+        ${rect('tank2', 'fill="url(#gWhite)" stroke="#0d1b33" stroke-width="1.5"')}
+        <rect x="${X0}" y="${Z.tank2.y0 + 12}" width="${W / 2}" height="${Z.tank2.y1 - Z.tank2.y0 - 24}" fill="#1d3557" opacity=".85"/>
+        <text x="${CX + 33}" y="${mid('tank2') + 6}" font-size="18" font-weight="900" fill="#1d3557" text-anchor="middle">GN-1</text>
+        ${rect('avionics', 'fill="url(#gGray)"')}
+        ${[0, 1, 2, 3].map(i => `<rect x="${X0 + 14 + i * 27}" y="${Z.avionics.y0 + 10}" width="20" height="${Z.avionics.y1 - Z.avionics.y0 - 20}" rx="3" fill="#1f2a3a"/><circle cx="${X0 + 24 + i * 27}" cy="${Z.avionics.y0 + 18}" r="3" fill="${i % 2 ? '#3ddc84' : '#ffcf3f'}"/>`).join('')}
+        ${rect('payload', 'fill="url(#gWhite)" stroke="#0d1b33" stroke-width="1.5"')}
+        <circle cx="${CX}" cy="${mid('payload')}" r="21" fill="#0d2b55" stroke="#9fb4d9" stroke-width="4"/>
+        <rect x="${CX - 5}" y="${mid('payload') - 5}" width="10" height="10" fill="#ffcf3f"/>
+        <rect x="${CX - 18}" y="${mid('payload') - 3}" width="11" height="6" fill="#5fa8ff"/><rect x="${CX + 7}" y="${mid('payload') - 3}" width="11" height="6" fill="#5fa8ff"/>
+        <path d="${NOSE}" fill="url(#gRed)" stroke="#0d1b33" stroke-width="1.5"/>
+        <path d="M${CX - 20},${Z.fairing.y0 + 30} C${CX - 12},${Z.fairing.y0 + 12} ${CX - 4},${Z.fairing.y0 + 6} ${CX},${Z.fairing.y0 + 4}" stroke="#fff8" stroke-width="5" fill="none" stroke-linecap="round"/>
+      </g>
+    </defs>`;
+
+  // 구역의 윤곽선(빈자리 점선)
+  function zoneOutline(z) {
+    const Z = ZONES[z];
+    if (z === 'fairing') return NOSE;
+    if (z === 'nozzle') return NOZZLE;
+    if (z === 'fins') return `${FIN_L} ${FIN_R}`;
+    return `M${X0},${Z.y0} H${X1} V${Z.y1} H${X0}Z`;
+  }
+  function zoneBox(z) {
+    const Z = ZONES[z];
+    if (z === 'nozzle') return { x: CX - 58, y: Z.y0, w: 116, h: Z.y1 - Z.y0 };
+    return { x: X0, y: Z.y0, w: W, h: Z.y1 - Z.y0 };
   }
 
-  function outline(p, s) {
-    const x0 = CX - W / 2, x1 = CX + W / 2;
-    switch (p.shape) {
-      case 'nozzle': return `M${CX - 36},${s.y1} L${CX + 36},${s.y1} L${CX + 56},${s.y0} L${CX - 56},${s.y0}Z`;
-      case 'nose': return `M${x0},${s.y0} C${x0},${s.y0 - 60} ${CX - 32},${s.y1 + 18} ${CX},${s.y1} C${CX + 32},${s.y1 + 18} ${x1},${s.y0 - 60} ${x1},${s.y0}Z`;
-      case 'band': return `M${x0 - 3},${s.y1} H${x1 + 3} V${s.y0} H${x0 - 3}Z`;
-      case 'shield': return `M${x0 - 10},${s.y1} H${x1 + 10} L${x1 - 4},${s.y0} H${x0 + 4}Z`;
-      case 'pipes': return `M${x0 + 8},${s.y1} H${x1 - 8} V${s.y0} H${x0 + 8}Z`;
-      case 'fins': {
-        const b = s.base, f = d => { const bx = CX + d * W / 2; return `M${bx},${b.y1 + 8} L${bx + d * 62},${b.y0 + 4} L${bx + d * 62},${b.y0 + 44} L${bx},${b.y0 + 8}Z`; };
-        return f(-1) + ' ' + f(1);
-      }
-      case 'finL': case 'finR': {
-        const d = s.side, bx = CX + d * W / 2, b = s.base;
-        return `M${bx},${b.y1 + 8} L${bx + d * 62},${b.y0 + 4} L${bx + d * 62},${b.y0 + 44} L${bx},${b.y0 + 8}Z`;
-      }
-      case 'antenna': {
-        const b = s.base, ym = (b.y0 + b.y1) / 2;
-        return `M${x0},${ym + 4} L${x0 - 50},${ym - 46} L${x0 - 44},${ym - 52} L${x0},${ym - 8}Z M${x1},${ym + 4} L${x1 + 50},${ym - 46} L${x1 + 44},${ym - 52} L${x1},${ym - 8}Z`;
-      }
-      default: return `M${x0},${s.y1} H${x1} V${s.y0} H${x0}Z`;
+  // 한 구역을 k개 조각으로 나누기 → [{x,y,w,h}] (날개는 왼쪽/오른쪽 따로)
+  function tiles(z, k) {
+    if (z === 'fins') {
+      const fy = Z.fins.y0 - 2, fh = Z.fins.y1 - Z.fins.y0 + 4;
+      const L = { x: X0 - 60, y: fy, w: 60, h: fh }, Rr = { x: X1, y: fy, w: 60, h: fh };
+      if (k === 1) return [{ x: X0 - 60, y: fy, w: W + 120, h: fh, fins: true }];
+      const per = [Math.ceil(k / 2), Math.floor(k / 2)];
+      const out = [];
+      [L, Rr].forEach((b, s) => { for (let i = 0; i < per[s]; i++) out.push({ x: b.x, y: b.y + (b.h / per[s]) * i, w: b.w, h: b.h / per[s] }); });
+      return out;
     }
+    const b = zoneBox(z);
+    const cols = Math.min(k, b.h < 45 ? 4 : 3);
+    const rows = Math.ceil(k / cols);
+    const out = [];
+    for (let r = 0; r < rows; r++) {
+      const n = r === rows - 1 ? k - cols * (rows - 1) : cols;
+      for (let c = 0; c < n; c++) out.push({ x: b.x + (b.w / n) * c, y: b.y + (b.h / rows) * r, w: b.w / n, h: b.h / rows });
+    }
+    return out;
   }
 
-  function center(p, s) {
-    if (p.shape === 'finL' || p.shape === 'finR') return [CX + s.side * (W / 2 + 34), s.base.y0 + 18];
-    if (p.shape === 'fins') return [CX - W / 2 - 34, s.base.y0 + 18];
-    if (p.shape === 'antenna') { const ym = (s.base.y0 + s.base.y1) / 2; return [CX - W / 2 - 34, ym - 30]; }
-    if (p.shape === 'nose') return [CX, s.y0 - 46];
-    return [CX, (s.y0 + s.y1) / 2];
-  }
-
-  function drawPiece(g, p, s) {
-    const x0 = CX - W / 2;
-    const d = outline(p, s);
-    const fill = { nozzle: 'url(#gMetal)', nose: 'url(#gRed)', finL: 'url(#gRed)', finR: 'url(#gRed)', fins: 'url(#gRed)', shield: 'url(#gGold)', pipes: '#2b2f3a', insulation: 'url(#gFrost)', panel: 'url(#gWhite)', band: 'url(#gNavy)', engine2: 'url(#gGray)', avionics: 'url(#gGray)', antenna: 'url(#gGray)' }[p.shape] || 'url(#gWhite)';
-    el('path', { d, fill, stroke: '#0d1b33', 'stroke-width': 1.5 }, g);
-    if (p.shape === 'body') {
-      // 탱크마다 무늬를 다르게
-      if (s.idx % 2 === 1) el('rect', { x: x0, y: s.y1 + s.h * 0.42, width: W, height: 14, fill: 'url(#gNavy)' }, g);
-      else { el('rect', { x: x0, y: s.y1 + 6, width: W / 2, height: s.h - 12, fill: '#1d3557', opacity: 0.85 }, g); }
-      if (s.idx === 2) {
-        const t = el('text', { x: CX + W / 4, y: (s.y0 + s.y1) / 2, 'font-size': 20, 'font-weight': 900, fill: '#1d3557', 'text-anchor': 'middle', 'dominant-baseline': 'middle', transform: `rotate(-90 ${CX + W / 4} ${(s.y0 + s.y1) / 2})` }, g);
-        t.textContent = 'KOREA';
-      }
-      if (s.idx === 3) {
-        const t = el('text', { x: CX, y: s.y1 + s.h * 0.24, 'font-size': 26, 'font-weight': 900, fill: '#c1121f', 'text-anchor': 'middle', 'dominant-baseline': 'middle' }, g);
-        t.textContent = '경남호';
-      }
-    }
-    if (p.shape === 'pipes') {
-      for (let i = 0; i < 5; i++) el('rect', { x: x0 + 18 + i * 21, y: s.y1, width: 8, height: s.h, rx: 3, fill: i % 2 ? '#c0c6d2' : '#e3a33b' }, g);
-      el('rect', { x: x0 + 10, y: s.y1 + s.h / 2 - 3, width: W - 20, height: 6, fill: '#8d939f' }, g);
-    }
-    if (p.shape === 'shield') el('path', { d: `M${x0 - 6},${s.y1 + 6} H${x0 + W + 6}`, stroke: '#fff6', 'stroke-width': 3 }, g);
-    if (p.shape === 'insulation') for (let i = 0; i < 9; i++) el('path', { d: `M${x0 + i * 16},${s.y0} l14,${-s.h}`, stroke: '#b9d7ef', 'stroke-width': 4 }, g);
-    if (p.shape === 'panel') {
-      el('path', { d: `M${x0},${(s.y0 + s.y1) / 2} H${x0 + W} M${CX},${s.y1} V${s.y0} M${x0 + W / 4},${s.y1} V${s.y0} M${x0 + W * 3 / 4},${s.y1} V${s.y0}`, stroke: '#8790a3', 'stroke-width': 1.5 }, g);
-      for (let i = 0; i < 8; i++) el('circle', { cx: x0 + 8 + i * 16, cy: s.y1 + 6, r: 2, fill: '#6b7385' }, g);
-    }
-    if (p.shape === 'band') for (let i = 0; i < 6; i++) el('circle', { cx: x0 + 12 + i * 21, cy: (s.y0 + s.y1) / 2, r: 3, fill: '#c9d3e6' }, g);
-    if (p.shape === 'engine2') el('path', { d: `M${CX - 14},${s.y1 + 6} H${CX + 14} L${CX + 24},${s.y0 - 3} H${CX - 24}Z`, fill: 'url(#gMetal)' }, g);
-    if (p.shape === 'avionics') for (let i = 0; i < 4; i++) {
-      el('rect', { x: x0 + 14 + i * 27, y: s.y1 + 10, width: 20, height: s.h - 20, rx: 3, fill: '#1f2a3a' }, g);
-      el('circle', { cx: x0 + 24 + i * 27, cy: s.y1 + 18, r: 3, fill: i % 2 ? '#3ddc84' : '#ffcf3f' }, g);
-    }
-    if (p.shape === 'payload') {
-      const cy = (s.y0 + s.y1) / 2;
-      el('circle', { cx: CX, cy, r: 22, fill: '#0d2b55', stroke: '#9fb4d9', 'stroke-width': 4 }, g);
-      el('rect', { x: CX - 6, y: cy - 6, width: 12, height: 12, fill: '#ffcf3f' }, g);
-      el('rect', { x: CX - 19, y: cy - 4, width: 11, height: 8, fill: '#5fa8ff' }, g);
-      el('rect', { x: CX + 8, y: cy - 4, width: 11, height: 8, fill: '#5fa8ff' }, g);
-    }
-    if (p.shape === 'antenna') {
-      const ym = (s.base.y0 + s.base.y1) / 2;
-      el('circle', { cx: x0 - 50, cy: ym - 50, r: 8, fill: '#ff5a5f' }, g);
-      el('circle', { cx: x0 + W + 50, cy: ym - 50, r: 8, fill: '#ff5a5f' }, g);
-    }
-    if (p.shape === 'nose') el('path', { d: `M${CX - 20},${s.y1 + 30} C${CX - 12},${s.y1 + 12} ${CX - 4},${s.y1 + 6} ${CX},${s.y1 + 4}`, stroke: '#fff8', 'stroke-width': 5, fill: 'none', 'stroke-linecap': 'round' }, g);
-  }
+  const ease = t => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
 
   const RocketView = {
     build(svg, parts) {
       this.svg = svg;
-      svg.innerHTML = `<defs>${DEFS}</defs>`;
-      const { slots } = layout(parts);
+      this.vb = [...FULL_VB];
+      svg.setAttribute('viewBox', this.vb.join(' '));
+      svg.innerHTML = ART;
+      const defs = svg.querySelector('defs');
+
       // 발사대와 타워
       const pad = el('g', {}, svg);
       el('rect', { x: 40, y: GROUND, width: 340, height: 26, fill: '#5b606c', rx: 4 }, pad);
-      el('rect', { x: 0, y: GROUND + 26, width: 420, height: 40, fill: '#23262f' }, pad);
+      el('rect', { x: 0, y: GROUND + 26, width: 420, height: 50, fill: '#23262f' }, pad);
       el('rect', { x: 352, y: 80, width: 8, height: GROUND - 80, fill: '#3a3f4c' }, pad);
       el('rect', { x: 384, y: 80, width: 8, height: GROUND - 80, fill: '#3a3f4c' }, pad);
       let lattice = '';
       for (let y = 80; y < GROUND; y += 40) lattice += `M356,${y} L388,${y + 40} M388,${y} L356,${y + 40} `;
       el('path', { d: lattice, stroke: '#3a3f4c', 'stroke-width': 3 }, pad);
       el('circle', { cx: 372, cy: 70, r: 7, fill: '#ff3b3b' }, pad);
-      const label = el('text', { x: 210, y: GROUND + 54, 'font-size': 20, 'font-weight': 700, fill: '#a9b6e0', 'text-anchor': 'middle' }, pad);
-      label.textContent = '🛰️ 로켓 발사대';
+      el('text', { x: 210, y: GROUND + 56, 'font-size': 20, 'font-weight': 700, fill: '#a9b6e0', 'text-anchor': 'middle' }, pad, '🛰️ 로켓 조립장');
 
-      const ghosts = el('g', {}, svg);
-      const pieces = el('g', {}, svg);
-      this.pieces = {};
-      // 날개·안테나가 몸통 뒤로 가도록 먼저 그립니다.
-      const back = ['finL', 'finR', 'fins', 'antenna'];
-      const order = [...parts].sort((a, b) => (back.includes(b.shape) ? 1 : 0) - (back.includes(a.shape) ? 1 : 0));
-      order.forEach(p => {
-        const s = slots[p.no];
-        if (!s) return;
-        el('path', { d: outline(p, s), class: 'ghost' }, ghosts);
-        const [tx, ty] = center(p, s);
-        const n = el('text', { x: tx, y: ty, class: 'ghost-num' }, ghosts);
-        n.textContent = p.no;
-        const g = el('g', { class: 'piece' }, pieces);
-        const ang = Math.random() * Math.PI * 2;
-        g.style.setProperty('--fx', `${Math.cos(ang) * 600}px`);
-        g.style.setProperty('--fy', `${-300 - Math.random() * 400}px`);
-        g.style.setProperty('--fr', `${(Math.random() - 0.5) * 120}deg`);
-        drawPiece(g, p, s);
-        this.pieces[p.no] = g;
+      // 부품을 구역별로 묶기
+      const byZone = {};
+      let bodyIdx = 0;
+      parts.forEach(p => {
+        const z = zoneOf(p, p.shape === 'body' ? bodyIdx++ : 0);
+        (byZone[z] = byZone[z] || []).push(p);
       });
+      this.slots = {};
+      for (const z in byZone) tiles(z, byZone[z].length).forEach((t, i) => { this.slots[byZone[z][i].no] = { ...t, zone: z }; });
+
+      const glow = el('ellipse', { cx: CX, cy: 400, rx: 190, ry: 360, fill: 'url(#gGlow)', class: 'rocket-glow' }, svg);
+      this.glow = glow;
+      const ghosts = el('g', { class: 'ghosts' }, svg);
+      const base = el('g', {}, svg);
+      const pieces = el('g', {}, svg);
+      const labels = el('g', { class: 'ghost-labels' }, svg);
+
+      // 부품이 없는 구역은 처음부터 있는 기본 구조로 그립니다(인공위성 칸은 마지막에 실음).
+      this.payloadBase = null;
+      for (const z in ZONES) {
+        el('path', { d: zoneOutline(z), class: 'ghost' }, ghosts);
+        if (byZone[z]) continue;
+        const id = `cz-${z}`;
+        const cp = el('clipPath', { id }, defs);
+        el('path', { d: zoneOutline(z) }, cp);
+        const g = el('g', { 'clip-path': `url(#${id})`, class: z === 'payload' ? 'base payload-base' : 'base' }, base);
+        el('use', { href: '#rocketArt' }, g);
+        if (z === 'payload') this.payloadBase = g;
+      }
+
+      this.pieces = {};
+      // 날개 조각을 먼저 그려 몸통 뒤로 가게 합니다.
+      const order = [...parts].sort((a, b) => (this.slots[b.no].zone === 'fins') - (this.slots[a.no].zone === 'fins'));
+      order.forEach(p => {
+        const t = this.slots[p.no];
+        const id = `cp-${p.no}`;
+        const cp = el('clipPath', { id }, defs);
+        if (t.zone === 'fins' && !t.fins) el('rect', { x: t.x, y: t.y, width: t.w, height: t.h }, cp);
+        else {
+          // 구역 모양 안에서 조각 사각형만
+          const inner = el('clipPath', { id: `${id}-z` }, defs);
+          el('path', { d: zoneOutline(t.zone) }, inner);
+          el('rect', { x: t.x, y: t.y, width: t.w, height: t.h, 'clip-path': `url(#${id}-z)` }, cp);
+        }
+        // 조각 경계 점선
+        el('rect', { x: t.x, y: t.y, width: t.w, height: t.h, class: 'ghost-tile', 'clip-path': `url(#${id})` }, ghosts);
+        const cx = t.x + t.w / 2, cy = t.y + t.h / 2;
+        t.cx = cx; t.cy = cy;
+        el('text', { x: cx, y: cy, class: 'ghost-num', 'font-size': Math.min(22, t.h * 0.5, t.w * 0.45) }, labels, p.no);
+
+        const g = el('g', { class: 'piece', 'clip-path': `url(#${id})` }, pieces);
+        const ang = Math.random() * Math.PI * 2;
+        g.style.setProperty('--fx', `${Math.cos(ang) * 700}px`);
+        g.style.setProperty('--fy', `${-200 - Math.random() * 500}px`);
+        g.style.setProperty('--fr', `${(Math.random() - 0.5) * 90}deg`);
+        g.style.transformOrigin = `${cx}px ${cy}px`;
+        el('use', { href: '#rocketArt' }, g);
+        // 막 도착한 조각을 강조하는 테두리
+        el('rect', { x: t.x + 1, y: t.y + 1, width: t.w - 2, height: t.h - 2, class: 'piece-hl' }, g);
+        this.pieces[p.no] = g;
+        p._label = labels.lastChild;
+      });
+      this.labels = Object.fromEntries(parts.map(p => [p.no, p._label]));
     },
 
-    set(arrived, animateNo) {
+    set(arrived, animateNo, complete) {
       if (animateNo == null) this.svg.classList.add('noanim');
       for (const no in this.pieces) {
-        const g = this.pieces[no];
-        g.classList.toggle('on', !!arrived[no]);
-        if (+no === animateNo && arrived[no]) {
+        const on = !!arrived[no];
+        this.pieces[no].classList.toggle('on', on);
+        this.labels[no].style.display = on ? 'none' : '';
+        if (+no === animateNo && on) {
+          const g = this.pieces[no];
           g.classList.remove('flash');
           void g.getBBox();
           g.classList.add('flash');
         }
       }
+      this.svg.classList.toggle('complete', !!complete);
+      if (this.payloadBase) this.payloadBase.classList.toggle('on', !!complete);
       if (animateNo == null) requestAnimationFrame(() => requestAnimationFrame(() => this.svg.classList.remove('noanim')));
     },
+
+    slot(no) { return this.slots[no]; },
+    zoneName(no) { return ZONES[this.slots[no]?.zone]?.name || ''; },
+
+    // viewBox를 부드럽게 옮겨 화면을 확대/축소합니다.
+    tweenTo(vb, ms = 650) {
+      cancelAnimationFrame(this.tw);
+      const from = [...this.vb];
+      const t0 = performance.now();
+      return new Promise(res => {
+        const step = now => {
+          const k = ease(Math.min(1, (now - t0) / ms));
+          this.vb = from.map((v, i) => v + (vb[i] - v) * k);
+          this.svg.setAttribute('viewBox', this.vb.join(' '));
+          if (k < 1) this.tw = requestAnimationFrame(step); else res();
+        };
+        this.tw = requestAnimationFrame(step);
+      });
+    },
+    // 그 부품을 중심으로 확대(조립 장면을 크게 보여 줌)
+    focus(no) {
+      const t = this.slots[no];
+      if (!t) return Promise.resolve();
+      const h = 300, w = h * (FULL_VB[2] / FULL_VB[3]) * 1.6;
+      return this.tweenTo([t.cx - w / 2, t.cy - h / 2, w, h], 600);
+    },
+    reset(ms) { return this.tweenTo([...FULL_VB], ms); },
   };
 
   window.RocketView = RocketView;

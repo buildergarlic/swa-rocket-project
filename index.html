@@ -30,6 +30,9 @@
         <div class="sky"></div>
         <svg id="rocketSvg" viewBox="0 0 420 775" preserveAspectRatio="xMidYMax meet"></svg>
         <div class="banner" id="banner"></div>
+        <div class="part-card" id="partCard"></div>
+        <div class="sat-load" id="satLoad">🛰️</div>
+        <div class="num-input" id="numInput"></div>
         <button class="launch-btn" id="launchBtn" hidden>🔥 발사 준비 완료! 눌러서 카운트다운 시작</button>
       </div>
       <aside class="parts">
@@ -38,7 +41,7 @@
           <div class="bar"><div id="barFill"></div></div>
         </div>
         <div class="part-grid" id="partGrid"></div>
-        <p class="hint">햄스터봇이 부품을 발사대에 가져오면 해당 부품을 눌러 주세요. 잘못 눌렀으면 다시 누르면 취소됩니다.</p>
+        <p class="hint">부품이 도착하면 버튼을 누르거나 키보드로 번호(1~<span id="maxNo"></span>)를 치세요. 두 자리는 연달아 치면 돼요(예: 2, 7 → 27번). 잘못 눌렀으면 그 버튼을 다시 누르면 취소됩니다.</p>
       </aside>
     </section>
 
@@ -70,9 +73,23 @@
       </fieldset>
       <fieldset>
         <legend>발사</legend>
-        <label>카운트다운 <input type="number" id="setCountdown" min="3" max="30"> 초</label>
-        <label><input type="checkbox" id="setSound"> 효과음 켜기</label>
-        <button type="button" id="previewLaunch">🎬 발사 장면 미리 보기 (현재 반)</button>
+        <label>카운트다운 <input type="number" id="setCountdown" min="3" max="10"> 초</label>
+        <label><input type="checkbox" id="setSound"> 효과음과 현장음 켜기</label>
+        <label><input type="checkbox" id="setVoice"> 안내 방송 목소리 켜기</label>
+        <div class="row"><button type="button" id="previewLaunch">🎬 발사 장면 전체 미리 보기</button><button type="button" id="previewQuick">⏩ 카운트다운부터 보기</button></div>
+        <label>마지막 자막 1줄 <input id="setCaption1" size="40"></label>
+        <label>마지막 자막 2줄 <input id="setCaption2" size="40"></label>
+      </fieldset>
+      <fieldset>
+        <legend>카운트다운 목소리</legend>
+        <div class="muted" id="voiceState"></div>
+        <div class="row">
+          <button type="button" id="voiceTest">🔊 컴퓨터 목소리 들어 보기</button>
+          <button type="button" id="recStart">🎙️ 선생님 목소리로 녹음</button>
+          <button type="button" id="recPreview">▶ 녹음 듣기</button>
+          <button type="button" id="recDelete" class="danger">녹음 지우기</button>
+          <b id="recCount" class="rec-count"></b>
+        </div>
       </fieldset>
       <fieldset>
         <legend>초기화</legend>
@@ -90,6 +107,7 @@
   <script src="js/parts.js"></script>
   <script src="js/geo.js"></script>
   <script src="js/sound.js"></script>
+  <script src="js/voice.js"></script>
   <script src="js/cinema.js"></script>
   <script src="js/rocket.js"></script>
   <script src="js/map.js"></script>

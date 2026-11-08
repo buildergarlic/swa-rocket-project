@@ -28,7 +28,10 @@
       this.regions = geo.regions.map((r, i) => ({ ...r, rings: parsePath(r.d), color: PALETTE[i % PALETTE.length] }));
       this.regionMap = Object.fromEntries(this.regions.map(r => [r.name, r]));
       this.markers = data.parts.map(p => ({ ...p, ...this.pos(p) }));
-      this.launch = { ...data.launchSite, ...this.pos(data.launchSite) };
+      // 실제 발사장 위치(real)와, 전지 지도 위에 그리는 자리(anchor)를 따로 둡니다.
+      const LS = data.launchSite;
+      this.launchReal = this.pos(LS);
+      this.launch = { ...LS, ...(LS.mapLat != null ? this.pos({ lat: LS.mapLat, lon: LS.mapLon }) : this.launchReal) };
       this.sheetInfo = data.sheets.map((s, i) => ({ ...s, ...this.cell(i), regions: [] }));
       // 장마다 들어가는 시군(경계 점의 4% 이상이 그 장 안에 있으면 포함)
       for (const r of this.regions) {
@@ -44,6 +47,11 @@
       }
       this.markers.forEach(m => { m.sheet = this.sheetOf(m.x, m.y); });
       this.launch.sheet = this.sheetOf(this.launch.x, this.launch.y);
+      // 실제 발사장이 전지 6장 밖(예: 전남 고흥)에 있는지
+      const gw = this.cw * data.grid.cols, gh = this.ch * data.grid.rows;
+      const out = pt => pt.x < -this.ox || pt.x > gw - this.ox || pt.y < -this.oy || pt.y > gh - this.oy;
+      this.launch.outside = out(this.launchReal);
+      if (out(this.launch)) this.launch.sheet = null;
 
       nav.querySelector('#prevSheet').onclick = () => this.show(((this.sheet ?? 1) + 4) % 6 + 1);
       nav.querySelector('#nextSheet').onclick = () => this.show((this.sheet ?? 0) % 6 + 1);
@@ -86,7 +94,14 @@
       const sheet = this.sheet;
       const si = sheet ? this.sheetInfo[sheet - 1] : null;
       const pad = sheet ? 0 : 4;
-      const vb = si ? [si.x, si.y, si.w, si.h] : [-this.ox - pad, -this.oy - pad, this.cw * data.grid.cols + pad * 2, this.ch * data.grid.rows + pad * 2];
+      let vb = si ? [si.x, si.y, si.w, si.h] : [-this.ox - pad, -this.oy - pad, this.cw * data.grid.cols + pad * 2, this.ch * data.grid.rows + pad * 2];
+      if (!si && this.launch.outside) {
+        // 지도 밖 실제 발사장까지 보이도록 넓힙니다
+        const R = this.launchReal;
+        const x0 = Math.min(vb[0], R.x - 30), y0 = Math.min(vb[1], R.y - 14);
+        const x1 = Math.max(vb[0] + vb[2], R.x + 30), y1 = Math.max(vb[1] + vb[3], R.y + 10);
+        vb = [x0, y0, x1 - x0, y1 - y0];
+      }
       svg.setAttribute('viewBox', vb.join(' '));
       svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
       svg.innerHTML = '';
@@ -145,6 +160,15 @@
       // 발사대
       const L = this.launch;
       const lg = el('g', {}, svg);
+      if (this.launch.outside && (L.x !== this.launchReal.x || L.y !== this.launchReal.y)) {
+        // 실제 발사장(지도 밖)과 지도 위 발사대 자리를 점선으로 잇습니다
+        const Rl = this.launchReal;
+        el('line', { x1: L.x, y1: L.y, x2: Rl.x, y2: Rl.y, stroke: '#ff5a5f', 'stroke-width': sheet ? 0.4 : 0.6, 'stroke-dasharray': '1.5 1' }, lg);
+        if (!sheet) {
+          el('circle', { cx: Rl.x, cy: Rl.y, r: 2.6, fill: '#ff5a5f', stroke: '#fff', 'stroke-width': 0.4 }, lg);
+          el('text', { x: Rl.x, y: Rl.y + 6, 'font-size': 2.4, 'text-anchor': 'middle', 'font-weight': 900, fill: '#fff', stroke: '#7a0010', 'stroke-width': 0.5, 'paint-order': 'stroke' }, lg, `실제 발사장: ${data.launchSite.place || ''}`);
+        }
+      }
       const lr = sheet ? 2.4 : 3.2;
       el('circle', { cx: L.x, cy: L.y, r: lr, fill: '#ff5a5f', stroke: '#fff', 'stroke-width': 0.5 }, lg);
       el('text', { x: L.x, y: L.y + 0.2, 'font-size': lr * 1.2, 'text-anchor': 'middle', 'dominant-baseline': 'central' }, lg, '🚀');
@@ -187,7 +211,7 @@
           <div class="sheet-buttons">${this.sheetInfo.map(s => `<button data-sheet="${s.no}" style="background:${s.color}">${s.no}번<br><small>${esc(s.name)}</small></button>`).join('')}</div>
           <h3>🚚 부품 업체 찾기 미션 (${data.parts.length}곳)</h3>
           <ul>${[...this.markers].sort((a, b) => a.no - b.no).map(mission).join('')}</ul>
-          <p class="muted">🚀 ${esc(data.launchSite.name)}: ${esc(data.launchSite.region)} (${this.launch.sheet}번 장)</p>
+          <p class="muted">🚀 ${esc(data.launchSite.name)}: ${esc(data.launchSite.place || data.launchSite.region)}${this.launch.outside ? ` (실제 위치는 경남 지도 밖${this.launch.sheet ? `, 지도에서는 ${this.launch.sheet}번 장 가장자리에 발사대를 둡니다` : ''})` : ` (${this.launch.sheet}번 장)`}</p>
           <p class="muted">지도 경계: ${esc(this.geo.source)}</p>`;
       } else {
         const si = this.sheetInfo[sheet - 1];

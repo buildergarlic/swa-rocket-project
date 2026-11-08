@@ -1,4 +1,5 @@
-// 발사 영상: 전체 화면 캔버스에 카운트다운 → 점화 → 상승 → 단 분리 → 우주 → 불꽃놀이와 축하 자막을 그립니다.
+// 발사 영상: 전체 화면 캔버스에 이송 → 기립 → 카운트다운 → 점화 → 상승 → 단 분리 → 페어링 분리
+// → 인공위성 분리 → 불꽃놀이와 축하 자막을 그립니다.
 // 모든 장면과 글자를 캔버스에 그리기 때문에 그대로 영상 파일로 녹화할 수 있습니다.
 (function () {
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -12,14 +13,21 @@
   const LIFTOFF = 1.2;     // 엔진 점화 후 발사대를 떠나는 순간
   const CUT_WIDE = 2.6;    // 엔진 클로즈업 → 추적 화면
   const SEPARATION = 12.5; // 1단 분리
-  const FIREWORKS = 16;    // 불꽃놀이 시작
-  const CAPTION = 17.5;    // 축하 자막
-  const BUTTONS = 19.5;    // 버튼 표시
-  const RECORD_END = 28;   // 녹화 종료
+  const FAIRING = 15.5;    // 페어링(머리 덮개) 분리
+  const ENGINE2_OFF = 18.3; // 2단 엔진 정지
+  const SAT_SEP = 19.3;    // 인공위성 분리
+  const FIREWORKS = 23;    // 불꽃놀이 시작
+  const CAPTION = 24;      // 축하 자막
+  const BUTTONS = 27;      // 버튼 표시
+  const RECORD_END = 36;   // 녹화 종료
+  // 발사 전 준비(카운트다운 시작 전 초): 이송 → 기립 → 안내 방송
+  const PRE = 13;
 
   const alt = T => (T < LIFTOFF ? 0 : 30 * Math.pow(T - LIFTOFF, 2.5));
   const vel = T => (T < LIFTOFF ? 0 : 75 * Math.pow(T - LIFTOFF, 1.5));
-  const displayKm = T => (T < LIFTOFF ? 0 : 115 * Math.pow(clamp((T - LIFTOFF) / 18, 0, 1.4), 2.2));
+  // 화면에 보여 줄 고도·속도(누리호 목표 궤도 약 700km, 궤도 속도 약 27,000km/h를 짧게 줄인 값)
+  const displayKm = T => (T < LIFTOFF ? 0 : 700 * Math.pow(clamp((T - LIFTOFF) / 21, 0, 1), 2.6));
+  const displayKmh = T => (T < LIFTOFF ? 0 : 27000 * Math.pow(clamp((T - LIFTOFF) / (19.3 - LIFTOFF), 0, 1), 1.3));
 
   function makeSprite(color, size = 128) {
     const c = document.createElement('canvas');
@@ -64,6 +72,7 @@
       root.innerHTML = `
         <canvas></canvas>
         <button class="cine-close" title="닫기">✕</button>
+        <button class="cine-hold" title="카운트다운 멈춤 (스페이스)">⏸ 카운트다운 멈춤</button>
         <div class="cine-rec" hidden>● 영상 녹화 중… 끝날 때까지 기다려 주세요</div>
         <div class="cine-actions" hidden>
           <button data-act="replay">🔁 다시 보기</button>
@@ -77,6 +86,11 @@
       this.actions = root.querySelector('.cine-actions');
       this.recBadge = root.querySelector('.cine-rec');
       root.querySelector('.cine-close').onclick = () => this.close();
+      this.holdBtn = root.querySelector('.cine-hold');
+      this.holdBtn.onclick = () => this.toggleHold();
+      this.onKey = e => { if (e.key === ' ') { e.preventDefault(); this.toggleHold(); } if (e.key === 'Escape') this.close(); };
+      document.addEventListener('keydown', this.onKey);
+      root.requestFullscreen?.().catch(() => {});
       this.actions.onclick = e => {
         const act = e.target.closest('button')?.dataset.act;
         if (act === 'replay') this.restart(false);
@@ -114,6 +128,34 @@
       this.lastBeep = null;
       this.actions.hidden = true;
       this.lower = null;
+      this.fairing = null;
+      this.sat = null;
+      this.paused = null;
+      this.holdBtn.textContent = '⏸ 카운트다운 멈춤';
+      window.Voice && Voice.cancel();
+      window.Sound && Sound.stopAmbient();
+    }
+
+    // 실제 발사처럼 카운트다운을 잠시 멈출 수 있습니다(홀드).
+    toggleHold() {
+      const T = this.time(performance.now());
+      if (T > 0) return;
+      if (this.paused == null) {
+        this.paused = performance.now();
+        this.holdBtn.textContent = '▶ 카운트다운 다시 시작';
+        Voice.cancel();
+        Voice.say('카운트다운을 잠시 멈춥니다.');
+      } else {
+        this.start += performance.now() - this.paused;
+        this.paused = null;
+        this.holdBtn.textContent = '⏸ 카운트다운 멈춤';
+        this.lastBeep = null;
+      }
+    }
+
+    time(now) {
+      const t = this.paused != null ? this.paused : now;
+      return (t - this.start) / 1000 - this.countdown - (this.opts.skipPre ? 0 : PRE);
     }
 
     restart(record) {
@@ -188,6 +230,10 @@
     close() {
       this.stopRecording(false);
       cancelAnimationFrame(this.raf);
+      document.removeEventListener('keydown', this.onKey);
+      Voice.cancel();
+      Sound.stopAmbient();
+      if (document.fullscreenElement === this.root) document.exitFullscreen?.();
       window.removeEventListener('resize', this.onResize);
       this.root.remove();
       this.opts.onClose && this.opts.onClose();
@@ -196,17 +242,25 @@
     // ───────── 카메라 ─────────
     camera(T, A) {
       const zBase = (this.H * 0.6) / 520;
+      const C = this.countdown;
+      if (T < -C) {
+        // 이송·기립 장면: 넓게 보다가 발사대 쪽으로 천천히 이동
+        const p = smooth(-(C + PRE), -(C + 7), T);
+        return { x: lerp(-520, 60, p), y: lerp(200, 280, smooth(-(C + 7), -C, T)), z: zBase * lerp(0.62, 0.78, smooth(-(C + 7), -C, T)), shot: 0 };
+      }
       if (T < 0) {
         const p = clamp((T + this.countdown) / this.countdown, 0, 1);
-        return { x: lerp(90, 10, p), y: lerp(300, 260, p), z: zBase * lerp(0.78, 0.98, smooth(0, 1, p)), shot: 1 };
+        return { x: lerp(60, 10, p), y: lerp(280, 260, p), z: zBase * lerp(0.78, 0.98, smooth(0, 1, p)), shot: 1 };
       }
       if (T < CUT_WIDE) {
         // 엔진 클로즈업: 아래에서 올려다보는 느낌
         return { x: -10, y: 70 + A * 0.9, z: zBase * lerp(2.5, 2.25, T / CUT_WIDE), shot: 2 };
       }
       const f = smooth(CUT_WIDE, 4.2, T);
-      const zoom = 1.05 - 0.5 * smooth(4.5, 11, T) - 0.25 * smooth(12, 17, T);
-      return { x: lerp(40, 0, f), y: 260 + Math.max(0, A - 140) * f, z: zBase * zoom, shot: 3 };
+      const zoom = 1.05 - 0.5 * smooth(4.5, 11, T) - 0.25 * smooth(12, 17, T) + 0.45 * smooth(SAT_SEP - 1, SAT_SEP + 2.5, T);
+      // 인공위성이 분리될 때는 위성 쪽으로 다가갑니다
+      const satFocus = smooth(FAIRING, SAT_SEP + 1, T) * 260 + (this.sat ? this.sat.dy : 0) * smooth(SAT_SEP, SAT_SEP + 2, T);
+      return { x: lerp(40, 0, f), y: 260 + Math.max(0, A - 140) * f + satFocus, z: zBase * zoom, shot: 3 };
     }
 
     // ───────── 메인 루프 ─────────
@@ -216,7 +270,8 @@
       this.last = now;
       this.fpsAvg = lerp(this.fpsAvg, dt * 1000, 0.05);
       this.quality = this.fpsAvg > 34 ? 0.45 : this.fpsAvg > 24 ? 0.7 : 1;
-      const T = (now - this.start) / 1000 - this.countdown;
+      const T = this.time(now);
+      this.holdBtn.hidden = T > 0 || this.recording;
       this.triggers(T);
       this.update(T, dt);
       this.draw(T);
@@ -227,14 +282,37 @@
     once(key, fn) { if (!this.events[key]) { this.events[key] = true; fn(); } }
 
     triggers(T) {
-      if (T < 0) {
+      const C = this.countdown;
+      if (this.paused != null) return;
+      if (!this.opts.skipPre) {
+        this.once('pre', () => { Sound.ambient(); Sound.truck(PRE - 7); Voice.say('경남호가 발사대로 이동하고 있습니다.'); });
+        if (T >= -(C + 7)) this.once('erect', () => { Sound.hydraulic(5); Voice.say('경남호를 발사대에 세웁니다.'); });
+        if (T >= -(C + 2.6)) this.once('ready', () => { Sound.quindar(); Voice.say('발사 준비 완료. 카운트다운을 시작합니다.'); });
+      } else this.once('pre', () => Sound.ambient());
+      if (T >= -C - 0.05) this.once('cd', () => { if (Voice.hasRecording()) Voice.playRecording(); });
+      if (T < 0 && T >= -C) {
         const n = Math.ceil(-T);
-        if (n !== this.lastBeep && n <= this.countdown) { this.lastBeep = n; Sound.beep(false); }
+        if (n !== this.lastBeep) { this.lastBeep = n; Sound.beep(false); if (!Voice.hasRecording()) Voice.count(n); }
       }
-      if (T >= 0) this.once('ign', () => { Sound.beep(true); Sound.rumble(16); this.flash = 0.55; });
+      if (T >= 0) this.once('ign', () => { Sound.beep(true); Sound.rumble(18); this.flash = 0.55; if (!Voice.hasRecording()) Voice.say('발사!', true); });
+      if (T >= LIFTOFF + 0.4) this.once('cheer', () => Sound.cheer());
+      if (T >= 4.5) this.once('v1', () => Voice.say('경남호가 힘차게 날아오릅니다.'));
+      if (T >= FAIRING) this.once('fair', () => {
+        Sound.pyro();
+        Voice.say('페어링 분리.');
+        this.fairing = { T0: T };
+      });
+      if (T >= ENGINE2_OFF) this.once('meco', () => Voice.say('2단 엔진 정지.'));
+      if (T >= SAT_SEP) this.once('sat', () => {
+        Sound.pyro();
+        Sound.chime();
+        Voice.say('인공위성 분리 성공! 태양전지판을 펼칩니다.');
+        this.sat = { T0: T, dy: 0 };
+      });
       if (T >= CUT_WIDE) this.once('cut', () => { this.flash = Math.max(this.flash, 0.35); });
       if (T >= SEPARATION) this.once('sep', () => {
         Sound.boom();
+        Voice.say('1단 분리. 2단 엔진 점화.');
         this.flash = 0.5;
         const A = alt(T);
         this.lower = { T0: T, alt0: A, v0: vel(T), x: 0, rot: 0 };
@@ -242,6 +320,7 @@
       });
       if (T >= CAPTION) this.once('cap', () => {
         Sound.fanfare();
+        setTimeout(() => { if (this.events.cap) Voice.say(this.captionLines().join(' '), false, true); }, 1600);
         for (let i = 0; i < 180; i++) this.addConfetti(true);
       });
     }
@@ -257,7 +336,8 @@
       const emit = (rate, fn) => { let n = rate * dt * q; while (n > 0) { if (n >= 1 || Math.random() < n) fn(); n -= 1; } };
 
       if (T < 0) {
-        // 산소 배출 증기
+        // 산소 배출 증기(발사대에 선 뒤부터)
+        if (T > -(this.countdown + 2.5) || this.opts.skipPre)
         emit(26, () => this.spawn('vapor', rand(-55, 55) > 0 ? 60 : -60, rand(150, 330), rand(-60, 60), rand(-30, 5), rand(1.5, 2.8), rand(10, 18), 40));
       } else {
         const groundBlast = 1 - smooth(4, 7, T);
@@ -271,7 +351,7 @@
           emit(60 * groundBlast, () => this.spawn('smoke', rand(260, 320), rand(-40, 0), rand(150, 450), rand(80, 350), rand(3, 6), rand(40, 60), rand(60, 120)));
           emit(70 * groundBlast, () => this.spawn('spark', rand(-30, 30), A - rand(0, 40), rand(-500, 500), rand(-60, 260), rand(0.3, 0.8), rand(3, 7)));
         }
-        if (T > LIFTOFF) {
+        if (T > LIFTOFF && T < ENGINE2_OFF) {
           const ny = T < SEPARATION ? A : A + 190;
           const trailRate = T < SEPARATION ? 70 : 30;
           emit(trailRate, () => this.spawn('trail', rand(-15, 15), ny - rand(80, 260), rand(-40, 40), rand(-120, -20), rand(4, 7), rand(30, 50), rand(40, 90)));
@@ -291,6 +371,18 @@
       }
       this.particles = this.particles.filter(p => p.life > 0);
 
+      if (this.fairing) {
+        const t = T - this.fairing.T0;
+        this.fairing.open = t;
+        this.fairing.alpha = 1 - smooth(2, 4, t);
+      }
+      if (this.sat) {
+        const t = T - this.sat.T0;
+        this.sat.dy = 70 * t;              // 로켓에서 천천히 멀어짐
+        this.sat.rot = 0.05 * t;
+        this.sat.deploy = smooth(0.8, 3, t); // 태양전지판 펼치기
+        this.stageDrop = 45 * Math.pow(t, 1.4);
+      }
       if (this.lower) {
         const t = T - this.lower.T0;
         this.lower.alt = this.lower.alt0 + this.lower.v0 * t - 0.5 * 2600 * t * t;
@@ -303,7 +395,7 @@
       if (T > FIREWORKS) {
         if (T > this.nextFirework) {
           this.launchFirework();
-          this.nextFirework = T + (T > 26 ? rand(0.6, 1.2) : rand(0.25, 0.55));
+          this.nextFirework = T + (T > 32 ? rand(0.6, 1.2) : rand(0.25, 0.55));
         }
       }
       const u = this.u;
@@ -329,7 +421,7 @@
         c.rot += c.vr * dt;
       }
       this.confetti = this.confetti.filter(c => c.y < this.H + 40);
-      if (T > CAPTION && T < 40 && Math.random() < 6 * dt) this.addConfetti(false);
+      if (T > CAPTION && T < 46 && Math.random() < 6 * dt) this.addConfetti(false);
 
       this.flash = Math.max(0, this.flash - dt * 1.4);
     }
@@ -399,8 +491,18 @@
         this.drawRocket(this.lower.x, this.lower.alt, 'lower', this.lower.rot);
         ctx.globalAlpha = 1;
       }
+      const pose = this.pose(T);
+      this.drawTransporter(T, pose, false);
       if (T > -0.2) this.drawEngineFlame(T, A);
-      this.drawRocket(0, A, T < SEPARATION ? 'full' : 'upper', 0);
+      if (this.sat) {
+        const t = T - this.sat.T0;
+        this.drawRocket(0, A - this.stageDrop, 'upper', -0.06 * t);
+        this.drawSatellite(8 * t, A + 362 + this.sat.dy, this.sat.rot, this.sat.deploy);
+      } else {
+        this.drawRocket(pose.x, A + pose.y, T < SEPARATION ? 'full' : 'upper', pose.rot);
+      }
+      if (this.fairing && this.fairing.alpha > 0) this.drawFairingHalves(A);
+      this.drawTransporter(T, pose, true);
       this.drawParticles(['smoke', 'vapor'], false);
       this.drawParticles(['spark'], false);
       this.drawClouds(cam, true);
@@ -410,6 +512,7 @@
       this.drawVignette();
       this.drawConfetti();
       this.drawCaption(T);
+      if (T < CAPTION) this.drawSubtitle();
       this.drawLetterbox(T);
       this.drawCountdown(T);
     }
@@ -676,6 +779,7 @@
       const z = this.cam.z;
       const upper = T >= SEPARATION;
       if (upper && T < SEPARATION + 0.8) return; // 2단 점화 전 잠깐 꺼짐
+      if (T >= ENGINE2_OFF) return;              // 2단 엔진 정지
       const ny = upper ? A + 190 : A;
       const [nx, sy] = this.ws(0, ny);
       const ign = smooth(-0.2, 0.6, T);
@@ -716,6 +820,139 @@
           ctx.ellipse(nx, sy + w * 0.75 * k, w * 0.16, w * 0.09, 0, 0, 6.28);
           ctx.fill();
         }
+      }
+      ctx.restore();
+    }
+
+    // 발사 전 로켓의 위치: 눕혀서 옮긴 뒤 발사대에 세웁니다.
+    pose(T) {
+      const C = this.countdown;
+      const tE = -(C + 7), tR = -(C + 2);
+      if (this.opts.skipPre || T >= tR) return { x: 0, y: 0, rot: 0 };
+      if (T < tE) {
+        const p = smooth(-(C + PRE), tE - 0.6, T);
+        return { x: lerp(-1900, 0, p), y: 75, rot: -Math.PI / 2 };
+      }
+      const q = smooth(tE, tR, T);
+      return { x: 0, y: lerp(75, 0, q), rot: lerp(-Math.PI / 2, 0, q) };
+    }
+
+    // 이송·기립 차량: 로켓을 눕혀 싣고 와서 팔(스트롱백)로 들어 올립니다.
+    drawTransporter(T, pose, front) {
+      if (this.opts.skipPre) return;
+      const C = this.countdown;
+      const tE = -(C + 7), tR = -(C + 2);
+      const away = smooth(-C + 0.5, -C + 5.5, T);
+      if (away >= 1) return;
+      const vx = T < tE ? pose.x : -2200 * away * away;
+      const { ctx } = this;
+      const z = this.cam.z;
+      const [bx, by] = this.ws(vx, 0);
+      ctx.save();
+      ctx.setTransform(z, 0, 0, z, bx, by);
+      if (!front) {
+        // 들어 올리는 팔: 로켓과 같이 섰다가 다시 눕습니다
+        const armRot = T < tR ? pose.rot : lerp(0, -Math.PI / 2, smooth(tR + 0.3, -C + 0.4, T));
+        ctx.save();
+        ctx.translate(10, -15);
+        ctx.rotate(armRot);
+        ctx.strokeStyle = '#c9a227';
+        ctx.lineWidth = 6;
+        ctx.strokeRect(70, -470, 26, 460);
+        ctx.beginPath();
+        for (let y = -10; y > -470; y -= 46) { ctx.moveTo(70, y); ctx.lineTo(96, y - 46); }
+        ctx.stroke();
+        ctx.restore();
+      } else {
+        // 차량 몸체(앞쪽에 그려 바퀴가 보이게)
+        ctx.fillStyle = '#d8a31f';
+        ctx.fillRect(-600, -15, 650, 26);
+        ctx.fillStyle = '#3a3f4c';
+        ctx.fillRect(-600, 11, 650, 14);
+        // 운전석
+        ctx.fillStyle = '#e9e2cf';
+        ctx.fillRect(-760, -95, 150, 120);
+        ctx.fillStyle = '#5ab0e0';
+        ctx.fillRect(-745, -82, 70, 40);
+        ctx.fillStyle = '#c1121f';
+        ctx.fillRect(-760, -20, 150, 10);
+        ctx.fillStyle = '#16181f';
+        for (const wx of [-720, -640, -460, -380, -120, -40]) {
+          ctx.beginPath(); ctx.arc(wx, 32, 26, 0, 6.28); ctx.fill();
+          ctx.fillStyle = '#6b7080';
+          ctx.beginPath(); ctx.arc(wx, 32, 10, 0, 6.28); ctx.fill();
+          ctx.fillStyle = '#16181f';
+        }
+        // 경광등
+        ctx.fillStyle = Math.sin(T * 9) > 0 ? '#ffb000' : '#5a3a00';
+        ctx.beginPath(); ctx.arc(-690, -102, 9, 0, 6.28); ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    drawFairingHalves(A) {
+      const { ctx } = this;
+      const z = this.cam.z;
+      const t = this.fairing.open;
+      for (const side of [-1, 1]) {
+        const [bx, by] = this.ws(side * (60 + 90 * t * t), A + 330 - 140 * t * t);
+        ctx.save();
+        ctx.globalAlpha = this.fairing.alpha;
+        ctx.setTransform(z, 0, 0, z, bx, by);
+        ctx.rotate(side * (0.9 * t));
+        const g = ctx.createLinearGradient(-60 * side, 0, 0, 0);
+        g.addColorStop(0, '#8f1d22'); g.addColorStop(1, '#ff5a5f');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        // 반쪽 덮개: 바깥 가장자리(0)에서 가운데(-60*side)까지
+        ctx.moveTo(0, 0);
+        ctx.lineTo(0, -30);
+        ctx.bezierCurveTo(0, -90, -side * 30, -140, -side * 60, -160);
+        ctx.lineTo(-side * 60, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    drawSatellite(x, y, rot, deploy) {
+      const { ctx } = this;
+      const z = this.cam.z;
+      const [bx, by] = this.ws(x, y);
+      ctx.save();
+      ctx.setTransform(z, 0, 0, z, bx, by);
+      ctx.rotate(rot);
+      // 태양전지판
+      const pw = 20 + 210 * deploy;
+      for (const s of [-1, 1]) {
+        ctx.fillStyle = '#9aa3b5';
+        ctx.fillRect(s > 0 ? 34 : -34 - 14, -40, 14, 6);
+        const x0 = s > 0 ? 48 : -48 - pw;
+        const g = ctx.createLinearGradient(x0, 0, x0 + pw, 0);
+        g.addColorStop(0, '#16336b'); g.addColorStop(0.5, '#2f6fd1'); g.addColorStop(1, '#16336b');
+        ctx.fillStyle = g;
+        ctx.fillRect(x0, -62, pw, 50);
+        ctx.strokeStyle = '#9fc4ff';
+        ctx.lineWidth = 1.5;
+        for (let i = 1; i < pw / 26; i++) { ctx.beginPath(); ctx.moveTo(x0 + i * 26, -62); ctx.lineTo(x0 + i * 26, -12); ctx.stroke(); }
+        ctx.beginPath(); ctx.moveTo(x0, -37); ctx.lineTo(x0 + pw, -37); ctx.stroke();
+      }
+      // 몸체(금색 단열 포일)
+      const gb = ctx.createLinearGradient(-34, 0, 34, 0);
+      gb.addColorStop(0, '#8a5a12'); gb.addColorStop(0.45, '#ffd56b'); gb.addColorStop(1, '#7a4c0e');
+      ctx.fillStyle = gb;
+      ctx.fillRect(-34, -80, 68, 74);
+      ctx.strokeStyle = '#ffe9a8';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(-34, -80, 68, 74);
+      // 안테나 접시
+      ctx.fillStyle = '#e8ecf3';
+      ctx.beginPath(); ctx.ellipse(0, -92, 26, 10, 0, 0, Math.PI); ctx.fill();
+      ctx.fillRect(-2, -92, 4, 14);
+      // 반짝이는 표시등
+      if (Math.sin(performance.now() / 180) > 0) {
+        ctx.fillStyle = '#7dffb0';
+        ctx.beginPath(); ctx.arc(20, -70, 4, 0, 6.28); ctx.fill();
       }
       ctx.restore();
     }
@@ -764,6 +1001,14 @@
         ctx.fillRect(-60, -330, 120, 126);
         ctx.fillStyle = navy;
         ctx.fillRect(-60, -214, 120, 10);
+        if (part === 'upper' && this.fairing) {
+          // 페어링이 열린 뒤: 위성 어댑터와(분리 전이면) 위성
+          ctx.fillStyle = cyl(-50, 100, '#c7ccd6', '#5b6270');
+          ctx.beginPath(); ctx.moveTo(-60, -330); ctx.lineTo(60, -330); ctx.lineTo(36, -362); ctx.lineTo(-36, -362); ctx.closePath(); ctx.fill();
+          ctx.restore();
+          if (!this.sat) this.drawSatellite(x, y + 362, rot, 0);
+          return;
+        }
         // 위성 탑재칸
         ctx.fillStyle = cyl(-60, 120, '#e9eef8', '#8a94a8');
         ctx.fillRect(-60, -362, 120, 34);
@@ -781,7 +1026,7 @@
         // 이름
         ctx.save();
         ctx.translate(8, -268);
-        ctx.rotate(-Math.PI / 2);
+        ctx.rotate(Math.PI / 2); // 위에서 아래로 읽기(누워 있을 때도 바로 읽힘)
         ctx.fillStyle = '#1d3557';
         ctx.font = 'bold 30px "Noto Sans KR", "Malgun Gothic", sans-serif';
         ctx.textAlign = 'center';
@@ -879,6 +1124,20 @@
       return w > maxW ? size * maxW / w : size;
     }
 
+    captionLines() {
+      const c = this.opts.caption || [];
+      return [c[0] || '로켓 발사를 위해 최선을 다한 여러분에게 감사드립니다.', c[1] || '로켓 발사 성공 축하합니다!'];
+    }
+
+    // 안내 방송 자막(목소리가 녹화되지 않아도 영상에 글자가 남습니다)
+    drawSubtitle() {
+      const sub = window.Voice && Voice.current();
+      if (!sub) return;
+      const { W, H, u } = this;
+      const size = this.fitSize(sub, 40 * u, W * 0.8);
+      this.text(`📢 ${sub}`, W / 2, H * 0.83, size, { weight: 800, fill: '#ffffff', stroke: 'rgba(0,0,0,0.85)' });
+    }
+
     drawCaption(T) {
       if (T < CAPTION) return;
       const { ctx, W, H, u } = this;
@@ -896,18 +1155,17 @@
       ctx.fillStyle = band;
       ctx.fillRect(-W / 2, -H * 0.2, W, H * 0.4);
 
-      const school = this.opts.school || '';
-      const cls = this.opts.className || '';
-      if (cls) this.text(cls, 0, -H * 0.13, 46 * u, { weight: 700, fill: '#ffe9a8', glow: 'rgba(255,200,80,0.8)' });
-      const gold = ctx.createLinearGradient(0, -H * 0.08, 0, H * 0.02);
+      const who = `${this.opts.school || ''} ${this.opts.className || ''}`.trim();
+      const [line1, line2] = this.captionLines();
+      if (who) this.text(who, 0, -H * 0.13, 46 * u, { weight: 700, fill: '#ffe9a8', glow: 'rgba(255,200,80,0.8)' });
+      const sz1 = this.fitSize(line1, 74 * u, W * 0.9);
+      this.text(line1, 0, -H * 0.045, sz1, { fill: '#ffffff', stroke: 'rgba(0,0,40,0.8)', glow: 'rgba(120,180,255,0.9)' });
+      const gold = ctx.createLinearGradient(0, H * 0.02, 0, H * 0.13);
       gold.addColorStop(0, '#fff7d1');
       gold.addColorStop(0.5, '#ffd34d');
       gold.addColorStop(1, '#ff9f1c');
-      const sz = this.fitSize(school, 118 * u, W * 0.88);
-      this.text(school, 0, -H * 0.035, sz, { fill: gold, stroke: 'rgba(60,20,0,0.85)', glow: 'rgba(255,170,40,0.9)' });
-      const line2 = '학생들의 로켓 발사를 축하합니다.';
-      const sz2 = this.fitSize(line2, 74 * u, W * 0.88);
-      this.text(line2, 0, H * 0.085, sz2, { fill: '#ffffff', stroke: 'rgba(0,0,40,0.8)', glow: 'rgba(120,180,255,0.9)' });
+      const sz2 = this.fitSize(line2, 112 * u, W * 0.9);
+      this.text(line2, 0, H * 0.075, sz2, { fill: gold, stroke: 'rgba(60,20,0,0.85)', glow: 'rgba(255,170,40,0.9)' });
       ctx.restore();
     }
 
@@ -929,26 +1187,36 @@
 
       const y = H - bar / 2;
       const t = T < 0 ? `T-${String(Math.ceil(-T)).padStart(2, '0')}` : `T+${String(Math.floor(T)).padStart(2, '0')}`;
+      if (this.paused != null) this.text('⏸ 카운트다운 멈춤(홀드)', W / 2, y, 30 * u, { weight: 900, fill: '#ff6b6b' });
       this.text(t, 40 * u, y, 34 * u, { align: 'left', weight: 900, fill: T < 0 ? '#ffcf5a' : '#7dffb0' });
       if (T >= 0) {
         const km = displayKm(T);
-        const kmh = Math.round((displayKm(T + 0.1) - km) * 18000);
+        const kmh = Math.round(displayKmh(T));
         this.text(`고도 ${km.toFixed(1)} km`, 230 * u, y, 30 * u, { align: 'left', weight: 700 });
         this.text(`속도 ${kmh.toLocaleString()} km/h`, 520 * u, y, 30 * u, { align: 'left', weight: 700 });
       }
+      const C = this.countdown;
       let status = '발사 준비 중';
-      if (T >= -3) status = '연결 팔 분리';
+      if (!this.opts.skipPre && T < -(C + 7)) status = '경남호 발사대로 이송 중';
+      else if (!this.opts.skipPre && T < -(C + 2)) status = '경남호 기립 중';
+      else if (T < -C) status = '발사 준비 완료';
+      if (T >= -3 && T < 0) status = '연결 팔 분리';
       if (T >= 0) status = '엔진 점화!';
       if (T >= LIFTOFF) status = '발사! 하늘로 올라갑니다';
       if (T >= 7) status = '구름을 뚫고 상승 중';
       if (T >= SEPARATION) status = '1단 분리 · 2단 엔진 점화';
       if (displayKm(T) >= 100) status = '고도 100 km 돌파 · 우주 도착!';
+      if (T >= FAIRING) status = '페어링 분리';
+      if (T >= ENGINE2_OFF) status = '2단 엔진 정지';
+      if (T >= SAT_SEP) status = '인공위성 분리 성공 · 태양전지판 전개';
+      if (T >= CAPTION) status = '임무 성공!';
       this.text(status, W - 40 * u, y, 30 * u, { align: 'right', weight: 700, fill: '#ffe9a8' });
       ctx.restore();
     }
 
     drawCountdown(T) {
       const { ctx, W, H, u } = this;
+      if (T < -this.countdown) return;
       if (T < 0) {
         const n = Math.ceil(-T);
         const frac = n + T; // 1 → 0
