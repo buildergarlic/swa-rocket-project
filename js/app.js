@@ -6,6 +6,16 @@
   const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const wait = ms => new Promise(r => setTimeout(r, ms));
 
+  // ── 전자칠판 화면 크기 맞추기 ──
+  // 화면은 1920×1080 기준으로 만들었습니다. 전자칠판의 해상도·배율이 달라도 같은 모양으로 보이도록
+  // 전체를 비율대로 줄이거나(1280×720 등) 키웁니다(4K 배율 100% 등).
+  function fitScreen() {
+    const z = Math.min(innerWidth / 1920, innerHeight / 1080);
+    document.body.style.zoom = Math.abs(z - 1) < 0.04 ? '' : String(Math.round(z * 1000) / 1000);
+  }
+  fitScreen();
+  addEventListener('resize', fitScreen);
+
   // ── 저장 ──
   let memory = null;
   function load() {

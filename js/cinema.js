@@ -219,7 +219,7 @@
       const ext = type.includes('mp4') ? 'mp4' : 'webm';
       const blob = new Blob(this.chunks, { type });
       const a = document.createElement('a');
-      const name = `${this.opts.school || '로켓'}_${this.opts.className || ''}_로켓발사.${ext}`.replace(/\s+/g, '');
+      const name = `${this.opts.school || '경남'}_로켓발사.${ext}`.replace(/\s+/g, '');
       a.href = URL.createObjectURL(blob);
       a.download = name;
       document.body.appendChild(a);
@@ -260,7 +260,13 @@
       const zoom = 1.05 - 0.5 * smooth(4.5, 11, T) - 0.25 * smooth(12, 17, T) + 0.45 * smooth(SAT_SEP - 1, SAT_SEP + 2.5, T);
       // 인공위성이 분리될 때는 위성 쪽으로 다가갑니다
       const satFocus = smooth(FAIRING, SAT_SEP + 1, T) * 260 + (this.sat ? this.sat.dy : 0) * smooth(SAT_SEP, SAT_SEP + 2, T);
-      return { x: lerp(40, 0, f), y: 260 + Math.max(0, A - 140) * f + satFocus, z: zBase * zoom, shot: 3 };
+      // 상승 중에는 로켓을 화면 위쪽에 두고 아래로 길게 이어지는 화염과 연기 기둥을 보여 줍니다
+      // (로켓 머리가 화면 위 끝에서 조금 떨어지도록 화면 중심을 계산합니다)
+      const half = (this.H / 2) / (zBase * zoom);
+      const yNormal = 260 + Math.max(0, A - 140) * f + satFocus;
+      const yHigh = A + 600 - half;
+      const k = 0.85 * smooth(3.5, 7, T) * (1 - smooth(11.5, 14, T));
+      return { x: lerp(40, 0, f), y: lerp(yNormal, Math.min(yNormal, yHigh), k), z: zBase * zoom, shot: 3 };
     }
 
     // ───────── 메인 루프 ─────────
@@ -294,8 +300,10 @@
         const n = Math.ceil(-T);
         if (n !== this.lastBeep) { this.lastBeep = n; Sound.beep(false); if (!Voice.hasRecording()) Voice.count(n); }
       }
-      if (T >= 0) this.once('ign', () => { Sound.beep(true); Sound.rumble(18); this.flash = 0.55; if (!Voice.hasRecording()) Voice.say('발사!', true); });
+      if (T >= -3.2) this.once('deluge', () => Sound.deluge(3.5));
+      if (T >= 0) this.once('ign', () => { Sound.beep(true); Sound.boom(); Sound.rumble(22); this.flash = 0.55; if (!Voice.hasRecording()) Voice.say('발사!', true); });
       if (T >= LIFTOFF + 0.4) this.once('cheer', () => Sound.cheer());
+      if (T >= 4) this.once('swell', () => Sound.swell(19));
       if (T >= 4.5) this.once('v1', () => Voice.say('경남호가 힘차게 날아오릅니다.'));
       if (T >= FAIRING) this.once('fair', () => {
         Sound.pyro();
@@ -355,6 +363,16 @@
           const ny = T < SEPARATION ? A : A + 190;
           const trailRate = T < SEPARATION ? 70 : 30;
           emit(trailRate, () => this.spawn('trail', rand(-15, 15), ny - rand(80, 260), rand(-40, 40), rand(-120, -20), rand(4, 7), rand(30, 50), rand(40, 90)));
+          // 화염 아래로 길게 남는 굵은 연기 기둥(누리호 발사 장면처럼): 로켓이 빨리 올라가도 화면 아래까지 이어지게
+          // 공기가 옅어지는 높은 곳에서는 점점 가늘어집니다.
+          const thick = 1 - smooth(9000, 30000, ny);
+          if (T < SEPARATION && thick > 0) {
+            const span = 900 + vel(T) * 0.9;
+            emit(150 * thick, () => {
+              const yy = ny - rand(260, span);
+              this.spawn('trail', rand(-25, 25) + (ny - yy) * rand(-0.02, 0.02), yy, rand(-60, 60), rand(-30, 30), rand(3, 6), rand(45, 75) * (0.6 + 0.4 * thick), rand(25, 60));
+            });
+          }
         }
       }
 
@@ -760,7 +778,7 @@
         }
         ctx.globalCompositeOperation = 'source-over';
         const fadeIn = Math.min(1, (p.max - p.life) * 4);
-        const base = p.kind === 'vapor' ? 0.45 : p.kind === 'trail' ? 0.38 : 0.5;
+        const base = p.kind === 'vapor' ? 0.45 : p.kind === 'trail' ? 0.46 : 0.55;
         ctx.globalAlpha = base * life * fadeIn;
         ctx.drawImage(p.gray ? this.graySprite : this.smokeSprite, x - r, y - r, r * 2, r * 2);
         // 불빛을 받아 주황색으로 물든 연기
@@ -785,7 +803,7 @@
       const ign = smooth(-0.2, 0.6, T);
       const thin = smooth(300, 12000, ny); // 높이 올라갈수록 화염이 넓게 퍼짐
       let w = (upper ? 46 : 96) * (1 + thin * 0.8);
-      let L = (upper ? 420 : 300) * ign * (1 + thin * 1.8) * rand(0.9, 1.08);
+      let L = (upper ? 420 : 470) * ign * (1 + thin * 1.8) * rand(0.9, 1.08);
       w *= z; L *= z;
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
@@ -1155,7 +1173,7 @@
       ctx.fillStyle = band;
       ctx.fillRect(-W / 2, -H * 0.2, W, H * 0.4);
 
-      const who = `${this.opts.school || ''} ${this.opts.className || ''}`.trim();
+      const who = (this.opts.school || '').trim(); // 학교 이름만(학년·반은 넣지 않음)
       const [line1, line2] = this.captionLines();
       if (who) this.text(who, 0, -H * 0.13, 46 * u, { weight: 700, fill: '#ffe9a8', glow: 'rgba(255,200,80,0.8)' });
       const sz1 = this.fitSize(line1, 74 * u, W * 0.9);
@@ -1177,7 +1195,7 @@
       ctx.fillRect(0, 0, W, bar);
       ctx.fillRect(0, H - bar, W, bar);
       // 방송 화면 느낌의 정보 표시
-      const title = `경남 로켓 발사 · ${this.opts.school || ''} ${this.opts.className || ''}`.trim();
+      const title = this.opts.school ? `경남 로켓 발사 · ${this.opts.school}` : '경남 로켓 발사';
       this.text(title, 40 * u, bar / 2, 30 * u, { align: 'left', weight: 700, fill: '#d8e2ff' });
       if (Math.sin(T * 5) > -0.3) {
         ctx.fillStyle = '#ff3030';

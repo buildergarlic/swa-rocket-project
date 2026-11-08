@@ -6,6 +6,18 @@
   let recordDest = null;
   let enabled = true;
   let ambientNodes = null;
+  let bus = null, outNode = null;
+
+  // 넓은 발사장 울림용 임펄스 응답(합성)
+  function impulse(c, sec) {
+    const len = Math.floor(c.sampleRate * sec);
+    const buf = c.createBuffer(2, len, c.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const d = buf.getChannelData(ch);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.6);
+    }
+    return buf;
+  }
 
   function ensure() {
     if (!enabled) return null;
@@ -13,9 +25,21 @@
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return null;
       ctx = new AC();
+      // master → 리미터(큰 소리도 찢어지지 않게) → 스피커, 그리고 공간 울림(리버브)을 섞습니다.
       master = ctx.createGain();
       master.gain.value = 0.9;
-      master.connect(ctx.destination);
+      const comp = ctx.createDynamicsCompressor();
+      comp.threshold.value = -14; comp.knee.value = 8; comp.ratio.value = 6;
+      comp.attack.value = 0.004; comp.release.value = 0.25;
+      bus = ctx.createGain();
+      bus.connect(comp);
+      const verb = ctx.createConvolver();
+      verb.buffer = impulse(ctx, 3.2);
+      const wet = ctx.createGain(); wet.gain.value = 0.32;
+      master.connect(bus);
+      master.connect(verb).connect(wet).connect(bus);
+      comp.connect(ctx.destination);
+      outNode = comp;
     }
     if (ctx.state === 'suspended') ctx.resume();
     return ctx;
@@ -73,7 +97,7 @@
       if (!c || !c.createMediaStreamDestination) return null;
       if (!recordDest) {
         recordDest = c.createMediaStreamDestination();
-        master.connect(recordDest);
+        outNode.connect(recordDest);
       }
       return recordDest.stream;
     },
@@ -220,52 +244,124 @@
       src.start();
     },
 
-    // 엔진 굉음: 낮은 노이즈 + 저역 진동, 서서히 줄어듭니다
-    rumble(seconds = 14) {
+    // 엔진 굉음: 땅을 울리는 초저음 + 거친 굉음 + 타닥타닥 터지는 크래클 + 울림.
+    // seconds 동안 점점 멀어지며 줄어듭니다.
+    rumble(seconds = 22) {
+      const c = ensure();
+      if (!c) return;
+      const t0 = c.currentTime, end = t0 + seconds;
+      const env = (g, peak, rise, holdUntil) => {
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(peak, t0 + rise);
+        g.gain.setValueAtTime(peak, t0 + holdUntil);
+        g.gain.exponentialRampToValueAtTime(0.0001, end);
+      };
+      // 1) 거친 굉음(브라운 노이즈, 2채널로 넓게)
+      for (const pan of [-0.6, 0.6]) {
+        const src = c.createBufferSource();
+        src.buffer = noiseBuffer(c, seconds);
+        const lp = c.createBiquadFilter(); lp.type = 'lowpass';
+        lp.frequency.setValueAtTime(250, t0);
+        lp.frequency.linearRampToValueAtTime(1800, t0 + 1.5);
+        lp.frequency.setValueAtTime(1800, t0 + 6);
+        lp.frequency.exponentialRampToValueAtTime(260, end);
+        const g = c.createGain(); env(g, 0.95, 0.9, 6);
+        const p = c.createStereoPanner ? c.createStereoPanner() : null;
+        if (p) { p.pan.value = pan; src.connect(lp).connect(g).connect(p).connect(master); }
+        else src.connect(lp).connect(g).connect(master);
+        src.start(t0);
+      }
+      // 2) 중역 포효(핑크 노이즈 밴드)
+      {
+        const src = c.createBufferSource(); src.buffer = noiseBuffer(c, seconds, 'pink');
+        const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 420; bp.Q.value = 0.6;
+        bp.frequency.exponentialRampToValueAtTime(160, end);
+        const g = c.createGain(); env(g, 0.45, 1.2, 5);
+        src.connect(bp).connect(g).connect(master); src.start(t0);
+      }
+      // 3) 초저음(가슴이 울리는 진동) - 천천히 떨리게
+      {
+        const o = c.createOscillator(); o.type = 'sine';
+        o.frequency.setValueAtTime(34, t0); o.frequency.linearRampToValueAtTime(46, end);
+        const o2 = c.createOscillator(); o2.type = 'triangle';
+        o2.frequency.setValueAtTime(52, t0); o2.frequency.linearRampToValueAtTime(70, end);
+        const g = c.createGain(); env(g, 0.8, 0.7, 7);
+        const lfo = c.createOscillator(); lfo.frequency.value = 7;
+        const lg = c.createGain(); lg.gain.value = 0.25;
+        lfo.connect(lg).connect(g.gain);
+        const g2 = c.createGain(); g2.gain.value = 0.35;
+        o.connect(g); o2.connect(g2).connect(g); g.connect(master);
+        [o, o2, lfo].forEach(n => { n.start(t0); n.stop(end); });
+      }
+      // 4) 크래클: 실제 로켓 소리 특유의 타닥타닥 터지는 소리
+      {
+        const len = Math.floor(c.sampleRate * seconds);
+        const buf = c.createBuffer(2, len, c.sampleRate);
+        for (let ch = 0; ch < 2; ch++) {
+          const d = buf.getChannelData(ch);
+          let i = 0;
+          while (i < len) {
+            const amp = 0.4 + Math.random() * 0.6;
+            const n = 40 + Math.floor(Math.random() * 260);
+            for (let k = 0; k < n && i + k < len; k++) d[i + k] = (Math.random() * 2 - 1) * amp * Math.exp(-k / (n / 4));
+            i += n + Math.floor(Math.random() * c.sampleRate * 0.012);
+          }
+        }
+        const src = c.createBufferSource(); src.buffer = buf;
+        const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 500;
+        const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 6000;
+        lp.frequency.setValueAtTime(6000, t0 + 5); lp.frequency.exponentialRampToValueAtTime(900, end);
+        const g = c.createGain(); env(g, 0.55, 1.0, 5);
+        src.connect(hp).connect(lp).connect(g).connect(master); src.start(t0);
+      }
+    },
+    // 점화 직전: 물 분사(물 억제 장치)와 연소 시작 쉭 소리
+    deluge(seconds = 4) {
       const c = ensure();
       if (!c) return;
       const t0 = c.currentTime;
-      const src = c.createBufferSource();
-      src.buffer = noiseBuffer(c, seconds);
-      const lp = c.createBiquadFilter();
-      lp.type = 'lowpass';
-      lp.frequency.setValueAtTime(300, t0);
-      lp.frequency.linearRampToValueAtTime(1400, t0 + 1.2);
-      lp.frequency.linearRampToValueAtTime(500, t0 + seconds);
+      const src = c.createBufferSource(); src.buffer = noiseBuffer(c, seconds + 1, 'white');
+      const bp = c.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2500; bp.Q.value = 0.4;
       const g = c.createGain();
       g.gain.setValueAtTime(0.0001, t0);
-      g.gain.exponentialRampToValueAtTime(1.0, t0 + 0.6);
-      g.gain.setValueAtTime(1.0, t0 + 4);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + seconds);
-      src.connect(lp).connect(g).connect(master);
-      src.start(t0);
-
-      const sub = c.createOscillator();
-      const sg = c.createGain();
-      sub.type = 'sawtooth';
-      sub.frequency.setValueAtTime(38, t0);
-      sub.frequency.linearRampToValueAtTime(55, t0 + seconds);
-      const sl = c.createBiquadFilter();
-      sl.type = 'lowpass';
-      sl.frequency.value = 120;
-      sg.gain.setValueAtTime(0.0001, t0);
-      sg.gain.exponentialRampToValueAtTime(0.5, t0 + 0.8);
-      sg.gain.exponentialRampToValueAtTime(0.0001, t0 + seconds * 0.8);
-      sub.connect(sl).connect(sg).connect(master);
-      sub.start(t0);
-      sub.stop(t0 + seconds);
+      g.gain.exponentialRampToValueAtTime(0.18, t0 + 1);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + seconds + 1);
+      src.connect(bp).connect(g).connect(master); src.start(t0);
     },
+    // 점화 순간의 천둥 같은 폭음
     boom() {
       const c = ensure();
       if (!c) return;
       const t0 = c.currentTime;
       const src = c.createBufferSource();
-      src.buffer = noiseBuffer(c, 1.5);
+      src.buffer = noiseBuffer(c, 3);
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
       const g = c.createGain();
-      g.gain.setValueAtTime(1.2, t0);
-      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.4);
-      src.connect(g).connect(master);
+      g.gain.setValueAtTime(1.4, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 2.8);
+      src.connect(lp).connect(g).connect(master);
       src.start(t0);
+      tone(70, 2.5, { slideTo: 28, type: 'sine', vol: 0.9 });
+    },
+    // 상승 중 깔리는 웅장한 화음(오케스트라 느낌의 패드)
+    swell(seconds = 16) {
+      const c = ensure();
+      if (!c) return;
+      const t0 = c.currentTime, end = t0 + seconds;
+      const chord = [65.4, 98, 130.8, 164.8, 196, 261.6]; // C 장화음(낮게)
+      const out = c.createGain();
+      out.gain.setValueAtTime(0.0001, t0);
+      out.gain.exponentialRampToValueAtTime(0.16, t0 + seconds * 0.6);
+      out.gain.setValueAtTime(0.16, end - 2.5);
+      out.gain.exponentialRampToValueAtTime(0.0001, end);
+      const lp = c.createBiquadFilter(); lp.type = 'lowpass';
+      lp.frequency.setValueAtTime(300, t0); lp.frequency.exponentialRampToValueAtTime(2400, t0 + seconds * 0.7);
+      lp.connect(out).connect(master);
+      chord.forEach(f => [-6, 6].forEach(det => {
+        const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = det;
+        const g = c.createGain(); g.gain.value = 0.12;
+        o.connect(g).connect(lp); o.start(t0); o.stop(end + 0.1);
+      }));
     },
     pop() {
       const c = ensure();
