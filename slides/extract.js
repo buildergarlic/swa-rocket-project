@@ -15,7 +15,8 @@ const fs = require('fs');
       const hasText = el => el.textContent.trim().length > 0;
       const boxes = [];
       const visit = el => {
-        if (['SCRIPT','STYLE','SVG','svg'].includes(el.tagName) || el.closest('svg') || el.closest('.foot')) return;
+        if (['SCRIPT','STYLE','SVG','svg'].includes(el.tagName) || el.closest('svg') || el.closest('.foot') || el.closest('.top')) return;
+        if ([el, ...el.querySelectorAll('*')].every(x => !x.textContent.trim() || getComputedStyle(x).fontFamily.startsWith('Montserrat') || [...x.childNodes].every(n => n.nodeType !== 3 || !n.textContent.trim()))) { if (getComputedStyle(el).fontFamily.startsWith('Montserrat')) return; }
         if (!hasText(el)) return;
         const kids = [...el.children];
         const blockKids = kids.filter(k => !isInline(k) && hasText(k) && k.tagName !== 'BR');

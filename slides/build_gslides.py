@@ -35,7 +35,7 @@ for si, k in enumerate(sorted(D)):
         R.append({'insertText': {'objectId': oid, 'text': text}})
         def st(r):
             return {'fontFamily': r['f'], 'fontSize': {'magnitude': round(r['s'] * PT * 2) / 2, 'unit': 'PT'}, 'bold': r['b'], 'foregroundColor': col(r['c'])}
-        R.append({'updateTextStyle': {'objectId': oid, 'style': st(base), 'fields': 'fontFamily,fontSize,bold,foregroundColor'}})
+        R.append({'updateTextStyle': {'objectId': oid, 'style': st(base), 'fields': '*'}})
         # 기본과 다른 구간만 덧칠 (텍스트 길이가 \n\n 정리로 줄 수 있어 위치 재계산)
         pos = 0; full = ''
         for r in runs:
@@ -68,8 +68,8 @@ def flush():
 for n in sorted(out):
     for r in out[n]:
         l = len(json.dumps(r, ensure_ascii=False, separators=(',', ':')))
-        if size + l > 38000 and 'createSlide' in r: flush()
-        if size + l > 45000: flush()
+        if size + l > 36000 and 'createSlide' in r: flush()
+        if size + l > 42000: flush()
         cur.append(r); size += l
 flush()
 print('batches', bi)

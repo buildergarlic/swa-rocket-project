@@ -2,3 +2,5 @@ __pycache__/
 ai/
 pages/
 text.json
+gs_batches/
+gslides_req.json
