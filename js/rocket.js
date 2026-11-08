@@ -43,45 +43,60 @@
   const rect = (z, extra = '') => `<rect x="${X0}" y="${Z[z].y0}" width="${W}" height="${Z[z].y1 - Z[z].y0}" ${extra}/>`;
   const mid = z => (Z[z].y0 + Z[z].y1) / 2;
 
-  // 완성된 로켓 그림(조각들이 이 그림을 나눠 가짐)
+  // 완성된 로켓 그림(조각들이 이 그림을 나눠 가짐) - 그림책처럼 파스텔 색과 굵은 갈색 테두리
+  const INK = '#5a4636';
+  const O = `stroke="${INK}" stroke-width="4" stroke-linejoin="round"`;
   const ART = `
     <defs>
-      <linearGradient id="gWhite" x1="0" x2="1"><stop offset="0" stop-color="#9aa3b5"/><stop offset=".35" stop-color="#fff"/><stop offset=".6" stop-color="#f4f6fb"/><stop offset="1" stop-color="#8790a3"/></linearGradient>
-      <linearGradient id="gRed" x1="0" x2="1"><stop offset="0" stop-color="#8f1d22"/><stop offset=".4" stop-color="#ff5a5f"/><stop offset="1" stop-color="#7d161b"/></linearGradient>
-      <linearGradient id="gMetal" x1="0" x2="1"><stop offset="0" stop-color="#2b2e36"/><stop offset=".45" stop-color="#a3a9b5"/><stop offset="1" stop-color="#25282f"/></linearGradient>
-      <linearGradient id="gNavy" x1="0" x2="1"><stop offset="0" stop-color="#0d1b33"/><stop offset=".45" stop-color="#2f5590"/><stop offset="1" stop-color="#0d1b33"/></linearGradient>
-      <linearGradient id="gGray" x1="0" x2="1"><stop offset="0" stop-color="#5d6472"/><stop offset=".45" stop-color="#d9dde6"/><stop offset="1" stop-color="#555b68"/></linearGradient>
-      <linearGradient id="gGold" x1="0" x2="1"><stop offset="0" stop-color="#7a4a10"/><stop offset=".45" stop-color="#ffd27a"/><stop offset="1" stop-color="#6b3f0c"/></linearGradient>
-      <radialGradient id="gGlow"><stop offset="0" stop-color="#fff6c2" stop-opacity=".9"/><stop offset="1" stop-color="#ffcf3f" stop-opacity="0"/></radialGradient>
+      <radialGradient id="gGlow"><stop offset="0" stop-color="#fff6c2" stop-opacity=".95"/><stop offset="1" stop-color="#ffd6e4" stop-opacity="0"/></radialGradient>
       <g id="rocketArt">
-        <path d="${FIN_L}" fill="url(#gRed)" stroke="#0d1b33" stroke-width="1.5"/>
-        <path d="${FIN_R}" fill="url(#gRed)" stroke="#0d1b33" stroke-width="1.5"/>
-        <path d="${NOZZLE}" fill="url(#gMetal)" stroke="#0d1b33" stroke-width="1.5"/>
-        <rect x="${CX - 46}" y="${Z.nozzle.y0}" width="92" height="7" fill="url(#gGold)"/>
-        ${rect('engine', 'fill="#2b2f3a"')}
-        ${[0, 1, 2, 3, 4].map(i => `<rect x="${X0 + 20 + i * 21}" y="${Z.engine.y0}" width="8" height="${Z.engine.y1 - Z.engine.y0}" rx="3" fill="${i % 2 ? '#c0c6d2' : '#e3a33b'}"/>`).join('')}
-        <rect x="${X0 + 8}" y="${mid('engine') - 3}" width="${W - 16}" height="6" fill="#8d939f"/>
-        ${rect('tank1', 'fill="url(#gWhite)" stroke="#0d1b33" stroke-width="1.5"')}
-        <rect x="${X0}" y="${Z.tank1.y0 + 62}" width="${W}" height="12" fill="url(#gNavy)"/>
-        <rect x="${X0}" y="${Z.tank1.y1 - 10}" width="${W}" height="8" fill="url(#gNavy)"/>
-        <text x="${CX}" y="${Z.tank1.y0 + 42}" font-size="30" font-weight="900" fill="#c1121f" text-anchor="middle">경남호</text>
-        <text x="${CX}" y="${Z.tank1.y0 + 96}" font-size="15" font-weight="900" fill="#1d3557" text-anchor="middle">KOREA</text>
-        ${rect('interstage', 'fill="url(#gNavy)"')}
-        ${[0, 1, 2, 3, 4, 5].map(i => `<circle cx="${X0 + 12 + i * 21}" cy="${mid('interstage')}" r="3" fill="#c9d3e6"/>`).join('')}
-        ${rect('engine2', 'fill="url(#gGray)"')}
-        <path d="M${CX - 16},${Z.engine2.y0 + 6} H${CX + 16} L${CX + 28},${Z.engine2.y1 - 4} H${CX - 28}Z" fill="url(#gMetal)"/>
-        <rect x="${X0 + 10}" y="${Z.engine2.y0 + 12}" width="18" height="18" rx="4" fill="#3a3f4c"/><rect x="${X1 - 28}" y="${Z.engine2.y0 + 12}" width="18" height="18" rx="4" fill="#3a3f4c"/>
-        ${rect('tank2', 'fill="url(#gWhite)" stroke="#0d1b33" stroke-width="1.5"')}
-        <rect x="${X0}" y="${Z.tank2.y0 + 12}" width="${W / 2}" height="${Z.tank2.y1 - Z.tank2.y0 - 24}" fill="#1d3557" opacity=".85"/>
-        <text x="${CX + 33}" y="${mid('tank2') + 6}" font-size="18" font-weight="900" fill="#1d3557" text-anchor="middle">GN-1</text>
-        ${rect('avionics', 'fill="url(#gGray)"')}
-        ${[0, 1, 2, 3].map(i => `<rect x="${X0 + 14 + i * 27}" y="${Z.avionics.y0 + 10}" width="20" height="${Z.avionics.y1 - Z.avionics.y0 - 20}" rx="3" fill="#1f2a3a"/><circle cx="${X0 + 24 + i * 27}" cy="${Z.avionics.y0 + 18}" r="3" fill="${i % 2 ? '#3ddc84' : '#ffcf3f'}"/>`).join('')}
-        ${rect('payload', 'fill="url(#gWhite)" stroke="#0d1b33" stroke-width="1.5"')}
-        <circle cx="${CX}" cy="${mid('payload')}" r="21" fill="#0d2b55" stroke="#9fb4d9" stroke-width="4"/>
-        <rect x="${CX - 5}" y="${mid('payload') - 5}" width="10" height="10" fill="#ffcf3f"/>
-        <rect x="${CX - 18}" y="${mid('payload') - 3}" width="11" height="6" fill="#5fa8ff"/><rect x="${CX + 7}" y="${mid('payload') - 3}" width="11" height="6" fill="#5fa8ff"/>
-        <path d="${NOSE}" fill="url(#gRed)" stroke="#0d1b33" stroke-width="1.5"/>
-        <path d="M${CX - 20},${Z.fairing.y0 + 30} C${CX - 12},${Z.fairing.y0 + 12} ${CX - 4},${Z.fairing.y0 + 6} ${CX},${Z.fairing.y0 + 4}" stroke="#fff8" stroke-width="5" fill="none" stroke-linecap="round"/>
+        <path d="${FIN_L}" fill="#8fd3ff" ${O}/>
+        <path d="${FIN_R}" fill="#8fd3ff" ${O}/>
+        <path d="M${X0 - 40},${Z.fins.y1 - 34} L${X0 - 12},${Z.fins.y1 - 40}" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".8"/>
+        <path d="M${X1 + 40},${Z.fins.y1 - 34} L${X1 + 12},${Z.fins.y1 - 40}" stroke="#fff" stroke-width="5" stroke-linecap="round" opacity=".8"/>
+        <path d="${NOZZLE}" fill="#c9c2d9" ${O}/>
+        <path d="M${CX - 30},${Z.nozzle.y0 + 14} H${CX + 30}" stroke="#fff" stroke-width="4" stroke-linecap="round" opacity=".7"/>
+        ${rect('engine', `fill="#ffd27f" ${O}`)}
+        ${[0, 1, 2, 3].map(i => `<circle cx="${X0 + 26 + i * 26}" cy="${mid('engine')}" r="7" fill="#fff4cf" ${O.replace('4', '3')}/>`).join('')}
+        ${rect('tank1', `fill="#fffaf0" ${O}`)}
+        <rect x="${X0}" y="${Z.tank1.y0 + 64}" width="${W}" height="14" fill="#ff9fb5" ${O.replace('4', '3')}/>
+        <rect x="${X0}" y="${Z.tank1.y1 - 14}" width="${W}" height="10" fill="#b9ecd0" ${O.replace('4', '3')}/>
+        <text x="${CX}" y="${Z.tank1.y0 + 44}" font-size="32" fill="#ff6f91" text-anchor="middle" stroke="${INK}" stroke-width="1.5" paint-order="stroke" font-family="Jua, sans-serif">경남호</text>
+        <text x="${CX}" y="${Z.tank1.y0 + 99}" font-size="16" fill="${INK}" text-anchor="middle" font-family="Jua, sans-serif">★ KOREA ★</text>
+        ${rect('interstage', `fill="#b9ecd0" ${O}`)}
+        ${[0, 1, 2, 3, 4].map(i => `<circle cx="${X0 + 17 + i * 24}" cy="${mid('interstage')}" r="3.5" fill="${INK}"/>`).join('')}
+        ${rect('engine2', `fill="#d9ccff" ${O}`)}
+        <path d="M${CX - 16},${Z.engine2.y0 + 8} H${CX + 16} L${CX + 26},${Z.engine2.y1 - 6} H${CX - 26}Z" fill="#c9c2d9" ${O.replace('4', '3')}/>
+        ${rect('tank2', `fill="#fffaf0" ${O}`)}
+        <circle cx="${CX}" cy="${mid('tank2')}" r="34" fill="#bfe6ff" ${O}/>
+        <circle cx="${CX - 12}" cy="${mid('tank2') - 4}" r="5" fill="${INK}"/><circle cx="${CX + 12}" cy="${mid('tank2') - 4}" r="5" fill="${INK}"/>
+        <circle cx="${CX - 10}" cy="${mid('tank2') - 6}" r="1.8" fill="#fff"/><circle cx="${CX + 14}" cy="${mid('tank2') - 6}" r="1.8" fill="#fff"/>
+        <ellipse cx="${CX - 22}" cy="${mid('tank2') + 8}" rx="6" ry="4" fill="#ffaec4"/><ellipse cx="${CX + 22}" cy="${mid('tank2') + 8}" rx="6" ry="4" fill="#ffaec4"/>
+        <path d="M${CX - 7},${mid('tank2') + 8} Q${CX},${mid('tank2') + 15} ${CX + 7},${mid('tank2') + 8}" stroke="${INK}" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M${CX - 22},${mid('tank2') - 20} Q${CX - 14},${mid('tank2') - 28} ${CX - 4},${mid('tank2') - 29}" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/>
+        ${rect('avionics', `fill="#ffe9a3" ${O}`)}
+        ${[0, 1, 2].map(i => `<rect x="${X0 + 16 + i * 36}" y="${Z.avionics.y0 + 14}" width="26" height="${Z.avionics.y1 - Z.avionics.y0 - 28}" rx="8" fill="#fff" ${O.replace('4', '3')}/><circle cx="${X0 + 29 + i * 36}" cy="${mid('avionics')}" r="5" fill="${['#ff8fa3', '#7fd6a8', '#8fb8ff'][i]}"/>`).join('')}
+        ${rect('payload', `fill="#fffaf0" ${O}`)}
+        <rect x="${CX - 36}" y="${mid('payload') - 7}" width="18" height="14" rx="3" fill="#8fb8ff" ${O.replace('4', '2.5')}/>
+        <rect x="${CX + 18}" y="${mid('payload') - 7}" width="18" height="14" rx="3" fill="#8fb8ff" ${O.replace('4', '2.5')}/>
+        <rect x="${CX - 16}" y="${mid('payload') - 14}" width="32" height="28" rx="8" fill="#ffd27f" ${O.replace('4', '3')}/>
+        <path d="M${CX},${mid('payload') - 14} V${mid('payload') - 22}" stroke="${INK}" stroke-width="3"/><circle cx="${CX}" cy="${mid('payload') - 24}" r="3.5" fill="#ff8fa3" stroke="${INK}" stroke-width="2"/>
+        <path d="${NOSE}" fill="#ff9fb5" ${O}/>
+        <path d="M${CX - 22},${Z.fairing.y0 + 40} C${CX - 14},${Z.fairing.y0 + 22} ${CX - 6},${Z.fairing.y0 + 14} ${CX - 1},${Z.fairing.y0 + 12}" stroke="#fff" stroke-width="6" fill="none" stroke-linecap="round" opacity=".85"/>
+        <circle cx="${CX + 22}" cy="${Z.fairing.y1 - 34}" r="5" fill="#fff" opacity=".9"/><circle cx="${CX - 26}" cy="${Z.fairing.y1 - 22}" r="3.5" fill="#fff" opacity=".9"/>
+      </g>
+      <g id="hamBot">
+        <ellipse cx="0" cy="58" rx="46" ry="7" fill="${INK}" opacity=".18"/>
+        <circle cx="-30" cy="-34" r="13" fill="#ffc9a3" ${O}/><circle cx="30" cy="-34" r="13" fill="#ffc9a3" ${O}/>
+        <circle cx="-30" cy="-34" r="6" fill="#ffaec4"/><circle cx="30" cy="-34" r="6" fill="#ffaec4"/>
+        <rect x="-44" y="-30" width="88" height="80" rx="38" fill="#ffd9b8" ${O}/>
+        <ellipse cx="0" cy="22" rx="26" ry="20" fill="#fff6ea"/>
+        <circle cx="-15" cy="0" r="5.5" fill="${INK}"/><circle cx="15" cy="0" r="5.5" fill="${INK}"/>
+        <circle cx="-13" cy="-2" r="2" fill="#fff"/><circle cx="17" cy="-2" r="2" fill="#fff"/>
+        <ellipse cx="-28" cy="12" rx="7" ry="4.5" fill="#ffaec4"/><ellipse cx="28" cy="12" rx="7" ry="4.5" fill="#ffaec4"/>
+        <path d="M-5,9 Q0,14 5,9" stroke="${INK}" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M0,-30 V-44" stroke="${INK}" stroke-width="3"/><circle cx="0" cy="-48" r="5" fill="#ffe36e" stroke="${INK}" stroke-width="2.5"/>
+        <rect x="-36" y="44" width="20" height="12" rx="6" fill="#8fb8ff" ${O.replace('4', '3')}/><rect x="16" y="44" width="20" height="12" rx="6" fill="#8fb8ff" ${O.replace('4', '3')}/>
       </g>
     </defs>`;
 
@@ -131,17 +146,23 @@
       svg.innerHTML = ART;
       const defs = svg.querySelector('defs');
 
-      // 발사대와 타워
+      // 발사대와 타워(그림책 풍): 풀밭 언덕, 둥근 발사대, 파스텔 타워
       const pad = el('g', {}, svg);
-      el('rect', { x: 40, y: GROUND, width: 340, height: 26, fill: '#5b606c', rx: 4 }, pad);
-      el('rect', { x: 0, y: GROUND + 26, width: 420, height: 50, fill: '#23262f' }, pad);
-      el('rect', { x: 352, y: 80, width: 8, height: GROUND - 80, fill: '#3a3f4c' }, pad);
-      el('rect', { x: 384, y: 80, width: 8, height: GROUND - 80, fill: '#3a3f4c' }, pad);
+      el('path', { d: `M-700,${GROUND + 40} C-300,${GROUND + 40} -100,${GROUND - 24} 210,${GROUND - 24} C520,${GROUND - 24} 720,${GROUND + 40} 1120,${GROUND + 40} V${GROUND + 400} H-700Z`, fill: '#b9ecd0', stroke: INK, 'stroke-width': 4 }, pad);
+      [[30, GROUND + 30], [90, GROUND + 44], [330, GROUND + 36], [395, GROUND + 50]].forEach(([x, y]) =>
+        el('path', { d: `M${x - 6},${y} q6,-12 12,0`, stroke: '#5fb88a', 'stroke-width': 3, fill: 'none', 'stroke-linecap': 'round' }, pad));
+      el('rect', { x: 70, y: GROUND - 4, width: 280, height: 26, rx: 13, fill: '#e8dccb', stroke: INK, 'stroke-width': 4 }, pad);
+      el('rect', { x: 350, y: 84, width: 10, height: GROUND - 84, rx: 5, fill: '#ffd27f', stroke: INK, 'stroke-width': 3 }, pad);
+      el('rect', { x: 386, y: 84, width: 10, height: GROUND - 84, rx: 5, fill: '#ffd27f', stroke: INK, 'stroke-width': 3 }, pad);
       let lattice = '';
-      for (let y = 80; y < GROUND; y += 40) lattice += `M356,${y} L388,${y + 40} M388,${y} L356,${y + 40} `;
-      el('path', { d: lattice, stroke: '#3a3f4c', 'stroke-width': 3 }, pad);
-      el('circle', { cx: 372, cy: 70, r: 7, fill: '#ff3b3b' }, pad);
-      el('text', { x: 210, y: GROUND + 56, 'font-size': 20, 'font-weight': 700, fill: '#a9b6e0', 'text-anchor': 'middle' }, pad, '🛰️ 로켓 조립장');
+      for (let y = 100; y < GROUND - 10; y += 46) lattice += `M360,${y} H386 `;
+      el('path', { d: lattice, stroke: INK, 'stroke-width': 3, 'stroke-linecap': 'round' }, pad);
+      el('circle', { cx: 373, cy: 74, r: 9, fill: '#ff8fa3', stroke: INK, 'stroke-width': 3, class: 'beacon' }, pad);
+      el('text', { x: 210, y: GROUND + 62, 'font-size': 22, fill: INK, 'text-anchor': 'middle', 'font-family': 'Jua, sans-serif' }, pad, '로켓 조립장');
+      // 응원하는 햄찌봇(이 수업용으로 새로 그린 캐릭터)
+      const bot = el('g', { class: 'hambot', transform: `translate(48 ${GROUND - 46}) scale(.62)` }, pad);
+      el('use', { href: '#hamBot' }, el('g', { class: 'hambot-body' }, bot));
+      this.bot = bot;
 
       // 부품을 구역별로 묶기
       const byZone = {};
@@ -219,6 +240,8 @@
           g.classList.remove('flash');
           void g.getBBox();
           g.classList.add('flash');
+          // 햄찌봇이 깡충 뛰며 응원합니다
+          if (this.bot) { this.bot.classList.remove('cheer'); void this.bot.getBBox(); this.bot.classList.add('cheer'); }
         }
       }
       this.svg.classList.toggle('complete', !!complete);

@@ -1046,7 +1046,7 @@
         ctx.translate(8, -268);
         ctx.rotate(Math.PI / 2); // 위에서 아래로 읽기(누워 있을 때도 바로 읽힘)
         ctx.fillStyle = '#1d3557';
-        ctx.font = 'bold 30px "Noto Sans KR", "Malgun Gothic", sans-serif';
+        ctx.font = '30px Jua, "Malgun Gothic", sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText('경남호', 0, 0);
         ctx.restore();
@@ -1125,7 +1125,7 @@
 
     text(str, x, y, size, opts = {}) {
       const { ctx } = this;
-      ctx.font = `${opts.weight || 900} ${size}px "Noto Sans KR", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif`;
+      ctx.font = `${opts.weight || 900} ${size}px Jua, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif`;
       ctx.textAlign = opts.align || 'center';
       ctx.textBaseline = 'middle';
       if (opts.glow) { ctx.shadowColor = opts.glow; ctx.shadowBlur = size * 0.5; }
@@ -1137,7 +1137,7 @@
 
     fitSize(str, size, maxW) {
       const { ctx } = this;
-      ctx.font = `900 ${size}px "Noto Sans KR", "Malgun Gothic", sans-serif`;
+      ctx.font = `900 ${size}px Jua, "Malgun Gothic", sans-serif`;
       const w = ctx.measureText(str).width;
       return w > maxW ? size * maxW / w : size;
     }

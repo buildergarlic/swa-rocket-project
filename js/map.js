@@ -108,10 +108,10 @@
       const k = sheet ? 0.55 : 1; // 글자 크기 비율
       const all = el('g', {}, svg);
       // 바다
-      el('rect', { x: vb[0] - 50, y: vb[1] - 50, width: vb[2] + 100, height: vb[3] + 100, fill: '#9fcbe8' }, all);
+      el('rect', { x: vb[0] - 50, y: vb[1] - 50, width: vb[2] + 100, height: vb[3] + 100, fill: '#cdeeff' }, all);
       for (const n of this.geo.neighbors || []) {
         el('path', { d: n.d, class: 'neighbor' }, all);
-        el('text', { x: n.x, y: n.y + 7, 'font-size': 2.6 * k + (sheet ? 0.6 : 0), fill: '#e6e8ee', 'text-anchor': 'middle', 'font-weight': 700 }, all, `${n.name} (경남 아님)`);
+        el('text', { x: n.x, y: n.y + 7, 'font-size': 2.6 * k + (sheet ? 0.6 : 0), fill: '#8a7d70', 'text-anchor': 'middle' }, all, `${n.name} (경남 아님)`);
       }
       for (const r of this.regions) {
         el('path', { d: r.d, class: 'region', fill: r.color, 'stroke-width': sheet ? 0.3 : 0.35 }, all);
@@ -143,7 +143,7 @@
       // 맡은 장 바깥은 어둡게 가립니다.
       if (si) {
         const B = 400;
-        el('path', { d: `M${si.x - B},${si.y - B} h${si.w + 2 * B} v${si.h + 2 * B} h${-si.w - 2 * B}Z M${si.x},${si.y} v${si.h} h${si.w} v${-si.h}Z`, fill: '#0b1430', opacity: 0.72, 'fill-rule': 'evenodd' }, svg);
+        el('path', { d: `M${si.x - B},${si.y - B} h${si.w + 2 * B} v${si.h + 2 * B} h${-si.w - 2 * B}Z M${si.x},${si.y} v${si.h} h${si.w} v${-si.h}Z`, fill: '#fff8ec', opacity: 0.8, 'fill-rule': 'evenodd' }, svg);
       }
       // 전지 구역선
       const grid = el('g', {}, svg);
@@ -151,7 +151,7 @@
         el('rect', { x: s.x, y: s.y, width: s.w, height: s.h, class: 'sheet-line', 'stroke-width': sheet ? 0.5 : 0.6 }, grid);
         if (!sheet) {
           el('text', { x: s.x + 5, y: s.y + 9, class: 'sheet-num', 'font-size': 9, 'stroke-width': 1.2, 'text-anchor': 'start' }, grid, `${s.no}`);
-          el('text', { x: s.x + 12, y: s.y + 8, 'font-size': 3.2, fill: '#ffcf3f', stroke: '#0e2a52', 'stroke-width': 0.7, 'paint-order': 'stroke', 'font-weight': 900 }, grid, s.name);
+          el('text', { x: s.x + 12, y: s.y + 8, 'font-size': 3.2, fill: '#ff6f91', stroke: '#fff', 'stroke-width': 0.7, 'paint-order': 'stroke' }, grid, s.name);
           const hit = el('rect', { x: s.x, y: s.y, width: s.w, height: s.h, class: 'sheet-hit' }, grid);
           hit.addEventListener('click', () => this.show(s.no));
         }
@@ -179,7 +179,7 @@
       for (const m of this.markers) {
         const done = !!st.arrived[m.no];
         const g = el('g', { class: 'marker' }, mk);
-        el('circle', { cx: m.x, cy: m.y, r: mr, fill: done ? '#3ddc84' : '#ffcf3f', 'stroke-width': 0.4 }, g);
+        el('circle', { cx: m.x, cy: m.y, r: mr, fill: done ? '#7fd6a8' : '#ffe36e', 'stroke-width': 0.4 }, g);
         el('text', { x: m.x, y: m.y, 'font-size': mr * 1.1 }, g, done ? '✓' : m.no);
         if (sheet) {
           const label = st.teacher && m.company ? `⭐ ${m.no}. ${m.name} · ${m.company}` : `⭐ ${m.no}. ${m.name} 업체 ?`;
