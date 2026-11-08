@@ -54,7 +54,10 @@ const path = require('path');
             const raw = n.textContent; if (!raw) return;
             const c = getComputedStyle(n.parentElement);
             const fam = c.fontFamily.includes('Jua') ? 'Jua' : 'Noto Sans KR';
-            const mk = t => ({ t, w: fam === 'Jua' ? 400 : parseInt(c.fontWeight), c: c.color, s: parseFloat(c.fontSize), f: fam });
+            // 보드 코드는 CSS transform: scale()로 줄여 그리므로 글자 크기에 그 배율을 곱한다
+            let k = 1;
+            for (let a = n.parentElement; a; a = a.parentElement) { const tf = getComputedStyle(a).transform; if (tf && tf !== 'none') k *= Math.hypot(...new DOMMatrix(tf).toFloat64Array().slice(0, 2)); }
+            const mk = t => ({ t, w: fam === 'Jua' ? 400 : parseInt(c.fontWeight), c: c.color, s: Math.round(parseFloat(c.fontSize) * k * 100) / 100, f: fam });
             let cur = '';
             for (let i = 0; i < raw.length; i++) {
               const ch = raw[i];
@@ -74,7 +77,11 @@ const path = require('path');
             }
             if (cur) runs.push(mk(cur));
           } else if (n.nodeName === 'BR') { runs.push({ t: '\n' }); brk = true; }
-          else if (n.nodeType === 1 && !n.matches(SKIP)) n.childNodes.forEach(walk);
+          else if (n.nodeType === 1 && !n.matches(SKIP)) {
+            n.childNodes.forEach(walk);
+            // 오른쪽 여백이 있는 글자 조각(번호 등) 뒤에는 띄어쓰기를 넣는다
+            if ((parseFloat(getComputedStyle(n).marginRight) || 0) >= 3 && runs.length && !/[\s\v]$/.test(runs[runs.length - 1].t || '')) runs[runs.length - 1].t += ' ';
+          }
         };
         walk(el);
         while (runs.length && !runs[0].s) runs.shift();

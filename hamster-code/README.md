@@ -31,8 +31,19 @@ node mkpdf.js out/all.pdf   # (final/ 폴더 기준이면 경로를 맞춤)
 1. `node slideshot.js 1 sout` 로 15장을 보고 넘침을 확인합니다.
 2. `node sextract.js` → `stext.json`(글자 상자)과 `sbg/*.jpg`(글자를 지운 배경)를 만듭니다.
 3. 배경 그림을 이 폴더의 `slides-bg/`에 넣고 커밋해서 올립니다.
-4. `python3 build_gslides.py https://raw.githubusercontent.com/<owner>/<repo>/<commit>/hamster-code/slides-bg` → `gs/b*.json`
-5. 각 묶음을 Slides API `presentations.batchUpdate`로 보냅니다.
+4. `python3 build_gslides.py https://raw.githubusercontent.com/<owner>/<repo>/<commit>/hamster-code/slides-bg` → `gs/skeleton.json`(빈 슬라이드 15장), `gs/sNN.json`(슬라이드마다 배경과 글자 상자), `gs/delNN.json`(그 슬라이드를 다시 비우기)
+5. `skeleton.json`을 먼저 보내고, 각 `sNN.json`을 Slides API `presentations.batchUpdate`로 보냅니다. 개체 이름은 `hb_sNN`(슬라이드), `hb_sNN_bg`(배경), `hb_sNN_t0…`(글자 상자)입니다.
+6. 슬라이드 썸네일(가로 1600px)을 `thumbs/NN.png`로 받아 `python3 qa.py NN …`로 원본과 글자 위치를 비교합니다.
+
+### 글자 위치 맞춤값(build_gslides.py)
+
+Google 슬라이드와 Chrome은 같은 글꼴도 다르게 놓습니다. 시험 슬라이드로 잰 값입니다.
+
+- 줄 간격 100% = 글자 크기 × 1.2 (Noto Sans KR, Jua 같음). 100%보다 크면 늘어난 만큼 줄 아래에 붙고, 작으면 첫 줄이 0.9 × (1 − 비율) × 글자 크기만큼 올라갑니다.
+- 첫 줄 위치: Noto Sans KR은 Chrome보다 0.27em 위, Jua는 0.12em 아래에 그려집니다.
+- 굵기 700 이상은 `bold: true`를 같이 보내야 유지됩니다. 600은 `bold: false`로 둡니다.
+- Slides는 Noto Sans KR을 보통(400)과 굵게(700) 두 가지로만 그립니다. 300·500·600은 400으로, 800·900은 700으로 보입니다. 그래서 본문(600)이 HTML보다 조금 가늘게 보입니다.
+- 보드 안 코드는 CSS `transform: scale()`로 줄여 그립니다. `sextract.js`는 글자 크기에 이 배율을 곱해서 적습니다(안 곱하면 설명 글자가 커져서 줄이 넘어감).
 
 ## 코드 규칙(수업 자료와 맞춰야 함)
 

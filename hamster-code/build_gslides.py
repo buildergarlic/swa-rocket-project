@@ -6,11 +6,14 @@ import json, os, re, sys
 
 BASE = sys.argv[1].rstrip('/')
 YADJ = float(sys.argv[2]) if len(sys.argv) > 2 else 0.0
+# 첫 줄 위치 보정(em, +는 아래로). 측정: Slides가 Noto Sans KR은 0.27em 위에, Jua는 0.12em 아래에 그림
+EM_ADJ = {'Noto Sans KR': float(sys.argv[3]) if len(sys.argv) > 3 else 0.27, 'Jua': -0.12}
 D = json.load(open(os.path.join(os.path.dirname(__file__) or '.', 'stext.json')))
-ORDER = list(D.keys())
+ORDER = sorted(D.keys())
 PT = 720 / 1600          # 1px = 0.45pt (16:9 기본 크기 720x405pt)
 INSET = 7.2              # 글자 상자 기본 안쪽 여백(pt)
-NATURAL = {'Noto Sans KR': 1.448, 'Jua': 1.25}   # 글꼴의 기본 줄 높이(em)
+NATURAL = {'Noto Sans KR': 1.448, 'Jua': 1.25}   # 브라우저에서 line-height: normal 일 때 줄 높이(em)
+SLIDES_LH = 1.2   # Google Slides 줄 간격 100% = 글자 크기의 1.2배 (두 글꼴 모두 측정값)
 PREFIX = 'hb'
 
 
@@ -28,7 +31,7 @@ def fsize(px):
 
 
 def style_of(r):
-    return {'weightedFontFamily': {'fontFamily': r['f'], 'weight': r['w']}, 'bold': False,
+    return {'weightedFontFamily': {'fontFamily': r['f'], 'weight': r['w']}, 'bold': r['w'] >= 700,
             'fontSize': {'magnitude': fsize(r['s']), 'unit': 'PT'}, 'foregroundColor': col(r['c'])}
 
 
@@ -69,10 +72,14 @@ for sid_raw in ORDER:
         y = b['ty0']
         hgt = b['ty1'] - b['ty0']
         oid = f'{sid}_t{bi}'
+        lh = b['lh'] or NATURAL[base['f']]
+        L = lh / SLIDES_LH
+        # 줄 간격이 100%보다 작으면 Slides가 첫 줄을 (1-L)*0.9em 만큼 올려 그림 → 그만큼 내림
+        dy_px = EM_ADJ[base['f']] * base['s'] + (0.9 * (1 - L) * base['s'] if L < 1 else 0)
         R.append({'createShape': {'objectId': oid, 'shapeType': 'TEXT_BOX', 'elementProperties': {
             'pageObjectId': sid,
             'size': {'width': {'magnitude': r1(w * PT + 2 * INSET), 'unit': 'PT'}, 'height': {'magnitude': r1(hgt * PT + 2 * INSET), 'unit': 'PT'}},
-            'transform': {'scaleX': 1, 'scaleY': 1, 'translateX': r1(x * PT - INSET), 'translateY': r1(y * PT - INSET + YADJ), 'unit': 'PT'}}}})
+            'transform': {'scaleX': 1, 'scaleY': 1, 'translateX': r1(x * PT - INSET), 'translateY': r1((y + dy_px) * PT - INSET + YADJ), 'unit': 'PT'}}}})
         R.append({'insertText': {'objectId': oid, 'text': text}})
         R.append({'updateTextStyle': {'objectId': oid, 'textRange': {'type': 'ALL'}, 'style': style_of(base),
                                       'fields': 'weightedFontFamily,bold,fontSize,foregroundColor'}})
@@ -87,38 +94,32 @@ for sid_raw in ORDER:
                 d, f = {}, []
                 if (r['f'], r['w']) != (base['f'], base['w']):
                     d['weightedFontFamily'] = {'fontFamily': r['f'], 'weight': r['w']}; f.append('weightedFontFamily')
+                    d['bold'] = r['w'] >= 700; f.append('bold')
                 if r['c'] != base['c']:
                     d['foregroundColor'] = col(r['c']); f.append('foregroundColor')
                 if r['s'] != base['s']:
                     d['fontSize'] = {'magnitude': fsize(r['s']), 'unit': 'PT'}; f.append('fontSize')
                 R.append({'updateTextStyle': {'objectId': oid, 'textRange': {'type': 'FIXED_RANGE', 'startIndex': s0, 'endIndex': s1},
                                               'style': d, 'fields': ','.join(f)}})
-        lh = b['lh'] or NATURAL[base['f']]
-        ps = {'lineSpacing': round(lh / NATURAL[base['f']] * 100), 'spaceAbove': {'magnitude': 0, 'unit': 'PT'}, 'spaceBelow': {'magnitude': 0, 'unit': 'PT'}}
+        ps = {'lineSpacing': round(L * 100), 'spaceAbove': {'magnitude': 0, 'unit': 'PT'}, 'spaceBelow': {'magnitude': 0, 'unit': 'PT'}}
         fields = ['lineSpacing', 'spaceAbove', 'spaceBelow']
         if al in ('center', 'right', 'end'):
             ps['alignment'] = 'CENTER' if al == 'center' else 'END'; fields.append('alignment')
         R.append({'updateParagraphStyle': {'objectId': oid, 'textRange': {'type': 'ALL'}, 'style': ps, 'fields': ','.join(fields)}})
-        R.append({'updateShapeProperties': {'objectId': oid, 'shapeProperties': {'autofit': {'autofitType': 'NONE'}}, 'fields': 'autofit.autofitType'}})
     out[sid_raw] = R
 
 os.makedirs('gs', exist_ok=True)
 for f in os.listdir('gs'):
     os.remove(os.path.join('gs', f))
-# 슬라이드 단위로 묶음 (한 번에 보내기 좋은 크기)
-cur, size, bi = [], 0, 0
-def flush():
-    global cur, size, bi
-    if cur:
-        json.dump(cur, open(f'gs/b{bi:02d}.json', 'w'), ensure_ascii=False, separators=(',', ':'))
-        bi += 1
-    cur, size = [], 0
+skel = []
 for sid_raw in ORDER:
-    l = len(json.dumps(out[sid_raw], ensure_ascii=False, separators=(',', ':')))
-    if size + l > 26000:
-        flush()
-    cur.extend(out[sid_raw]); size += l
-flush()
-print('slides', len(out), 'batches', bi, 'requests', sum(len(v) for v in out.values()))
+    skel.append(out[sid_raw][0])
+    json.dump(out[sid_raw][1:], open(f'gs/s{sid_raw}.json', 'w'), ensure_ascii=False, separators=(',', ':'))
+skel.append({'deleteObject': {'objectId': 'p'}})
+for sid_raw in ORDER:
+    ids = [r[k]['objectId'] for r in out[sid_raw][1:] for k in ('createImage', 'createShape') if k in r]
+    json.dump([{'deleteObject': {'objectId': i}} for i in ids], open(f'gs/del{sid_raw}.json', 'w'), separators=(',', ':'))
+json.dump(skel, open('gs/skeleton.json', 'w'), ensure_ascii=False, separators=(',', ':'))
+print('slides', len(out), 'requests', sum(len(v) for v in out.values()))
 for f in sorted(os.listdir('gs')):
     print(f, os.path.getsize('gs/' + f))
