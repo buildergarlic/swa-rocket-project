@@ -214,6 +214,8 @@
     document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === `view-${b.dataset.view}`));
     if (b.dataset.view === 'map') MapView.render();
   };
+  // 주소 끝에 #map 이 있으면 지도 화면으로 시작합니다(예: index.html#map)
+  if (location.hash === '#map') { const mb = document.querySelector('#tabs button[data-view="map"]'); if (mb) mb.click(); }
 
   $('#teacherBtn').onclick = () => {
     if (!teacher && !confirm('강사용 정답(업체 이름과 근거 자료)을 화면에 보여줄까요?\n아이들이 조사를 마친 뒤에 켜 주세요.')) return;

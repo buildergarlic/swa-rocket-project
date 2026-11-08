@@ -208,7 +208,7 @@
         this.panel.innerHTML = `
           <h2>🗺️ 경상남도 지도</h2>
           <p class="muted">전지 ${data.grid.cols * data.grid.rows}장(세로 ${data.grid.sheetW}×${data.grid.sheetH}mm)을 가로 ${data.grid.cols}장 × 세로 ${data.grid.rows}장으로 깔면 경남 전체 지도가 됩니다. 축척은 약 1:${Math.round(1e6 / this.scale).toLocaleString()} (1km ≈ ${this.scale.toFixed(1)}mm)입니다. 맡은 장을 눌러 자세히 보세요.</p>
-          <div class="sheet-buttons">${this.sheetInfo.map(s => `<button data-sheet="${s.no}" style="background:${s.color}">${s.no}번<br><small>${esc(s.name)}</small></button>`).join('')}</div>
+          <div class="sheet-buttons">${this.sheetInfo.map(s => `<button data-sheet="${s.no}" data-color="${s.color}">${s.no}번<br><small>${esc(s.name)}</small></button>`).join('')}</div>
           <h3>🚚 부품 업체 찾기 미션 (${data.parts.length}곳)</h3>
           <ul>${[...this.markers].sort((a, b) => a.no - b.no).map(mission).join('')}</ul>
           <p class="muted">🚀 ${esc(data.launchSite.name)}: ${esc(data.launchSite.place || data.launchSite.region)}${this.launch.outside ? ` (실제 위치는 경남 지도 밖${this.launch.sheet ? `, 지도에서는 ${this.launch.sheet}번 장 가장자리에 발사대를 둡니다` : ''})` : ` (${this.launch.sheet}번 장)`}</p>
@@ -218,7 +218,7 @@
         const here = this.markers.filter(m => m.sheet === sheet);
         const lmList = si.regions.filter(r => r.main).flatMap(r => (data.landmarks[r.name] || []).map(l => `${l} <span class="muted">(${r.name})</span>`));
         this.panel.innerHTML = `
-          <h2><span style="color:${si.color}">■</span> ${sheet}번 장 · ${esc(si.name)}</h2>
+          <h2><span data-fg="${si.color}">■</span> ${sheet}번 장 · ${esc(si.name)}</h2>
           <p class="muted">들어가는 시군: ${si.regions.map(r => r.main ? `<b>${esc(r.name)}</b>` : `${esc(r.name)} 일부`).join(', ')}</p>
           <p class="muted">화면의 한 칸 = 전지 위 ${data.grid.gridMm / 10}cm × ${data.grid.gridMm / 10}cm. 칸 이름(A1, C3 …)을 보고 같은 칸에 옮겨 그리세요.</p>
           <h3>✅ 꼭 들어가야 할 내용</h3>
@@ -228,6 +228,9 @@
           <h3>🚚 이 장의 부품 업체</h3>
           <ul>${here.map(mission).join('') || '<li class="muted">이 장에는 부품 업체가 없어요.</li>'}</ul>`;
       }
+      // 색은 style 속성 대신 스크립트로 넣습니다(엄격한 보안 정책(CSP)에서도 보이도록)
+      this.panel.querySelectorAll('[data-color]').forEach(el => { el.style.background = el.dataset.color; });
+      this.panel.querySelectorAll('[data-fg]').forEach(el => { el.style.color = el.dataset.fg; });
       this.panel.querySelectorAll('[data-sheet]').forEach(b => b.onclick = () => this.show(+b.dataset.sheet));
     },
   };
