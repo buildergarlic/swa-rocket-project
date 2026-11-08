@@ -121,7 +121,7 @@ page(f'''<img src="{A}launch.jpg" style="position:absolute;inset:0;width:1280px;
 <div style="font-size:84px;font-weight:900;letter-spacing:-0.05em;line-height:1.08;margin-top:18px">경남 로켓<br>발사 작전</div>
 <div style="width:72px;height:4px;background:#38D0F5;margin:30px 0 24px"></div>
 <div style="font-size:22px;line-height:1.6;color:#D6E0F2">햄스터봇 택배로봇이 경남 곳곳의 로켓 부품 36개를<br>고흥 나로우주센터 발사대로 옮기면, 인공위성을 실은 로켓이 우주로 날아갑니다.</div>
-<div style="font-size:16px;color:#9FB0CF;margin-top:40px">초등학교 5·6학년 · 엔트리 블록코딩 · 4차시<br>진해도천초등학교 · 거제삼룡초등학교</div></div>''', dark=True, foot=False)
+<div style="font-size:16px;color:#9FB0CF;margin-top:40px">엔트리 블록코딩 · 햄스터봇 · 4차시<br>진해도천초등학교 · 거제삼룡초등학교</div></div>''', dark=True, foot=False)
 
 # 2 Contents
 items = [(f'{i:02d}', SEC[i]) for i in range(1, 7)]
@@ -240,7 +240,7 @@ page(f'''<img src="{A}map_full.jpg" style="position:absolute;left:64px;top:118px
 <li><span style="color:#1C7ED6;font-weight:700">파랑</span> 항공우주 회사 (부품은 수업용 연결)</li>
 <li><span style="color:#7048E8;font-weight:700">보라</span> 닮은 기술 지역 회사 · <span style="color:#2B8A3E;font-weight:700">초록</span> 시험기관 · <span style="color:#868E96;font-weight:700">회색</span> 가상 업체</li>
 <li>검은 선 = 햄스터봇 도로 (2cm 테이프)</li><li>주황 동그라미 = 이웃 구역과 만나는 연결점 1~12</li></ul></div>
-<div class="card" style="margin-top:14px"><div class="num">OUR SCHOOL</div><div class="cx">진해도천초: 6구역 (창원 진해)<br>거제삼룡초: 거제 (5·6구역)</div></div></div>''',
+<div class="card" style="margin-top:14px"><div class="num">OUR SCHOOL</div><div class="cx">진해도천초등학교: 6구역 (창원 진해)<br>거제삼룡초등학교: 거제 (5·6구역)</div></div></div>''',
      sec=3, title='경남 전체 지도와 6구역', foot=False)
 
 rows = ''
@@ -389,7 +389,7 @@ for sch in ['진해도천초등학교', '거제삼룡초등학교']:
 <div style="position:absolute;inset:0;background:linear-gradient(0deg,#030A1Ff5 0%,#030A1Fb3 45%,#030A1F00 75%)"></div>
 <div style="position:absolute;left:0;right:0;bottom:70px;text-align:center;color:#fff">
 <div class="en" style="font-size:18px;font-weight:800;color:#38D0F5">LAUNCH SUCCESS</div>
-<div style="font-size:26px;font-weight:700;margin-top:12px;color:#C7D3EA">{sch} 학생 여러분</div>
+<div style="font-size:26px;font-weight:700;margin-top:12px;color:#C7D3EA">{sch}</div>
 <div style="font-size:50px;font-weight:900;letter-spacing:-0.03em;margin-top:10px;line-height:1.3">로켓 발사를 위해 최선을 다한<br>여러분에게 감사드립니다.</div>
 <div style="font-size:40px;font-weight:900;margin-top:10px;color:#38D0F5">로켓 발사 성공 축하합니다!</div></div>''', dark=True, foot=False)
 
