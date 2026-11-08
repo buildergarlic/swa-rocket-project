@@ -83,8 +83,9 @@ def page(inner, dark=False, sec=None, kicker=None, title=None, lead=None, foot=T
     pages.append(h)
 
 def section(no, title, sub):
-    page(f'''<img src="{A}launch.jpg" style="position:absolute;right:0;top:0;height:720px;width:640px;object-fit:cover;opacity:.55">
-<div style="position:absolute;right:0;top:0;width:640px;height:720px;background:linear-gradient(90deg,#061433 0%,#06143300 60%)"></div>
+    img = f'ai_sec{no}.jpg' if os.path.exists(os.path.join(HERE, 'assets', f'ai_sec{no}.jpg')) else 'launch.jpg'
+    page(f'''<img src="{A}{img}" style="position:absolute;right:0;top:0;height:720px;width:760px;object-fit:cover;opacity:.9">
+<div style="position:absolute;right:0;top:0;width:760px;height:720px;background:linear-gradient(90deg,#061433 0%,#061433aa 30%,#06143300 70%)"></div>
 <div style="position:absolute;left:64px;top:220px">
 <div class="en" style="font-size:20px;font-weight:800;color:#38D0F5">PART {no:02d}</div>
 <div style="font-size:64px;font-weight:900;letter-spacing:-0.04em;margin-top:10px">{e(title)}</div>
@@ -114,7 +115,7 @@ TYPE = {'real': ('누리호 참여 확인', 'tag'), 'aero': ('항공우주 기�
 
 # ================= SLIDES =================
 # 1 Cover
-page(f'''<img src="{A}launch.jpg" style="position:absolute;inset:0;width:1280px;height:720px;object-fit:cover">
+page(f'''<img src="{A}ai_cover.jpg" style="position:absolute;inset:0;width:1280px;height:720px;object-fit:cover">
 <div style="position:absolute;inset:0;background:linear-gradient(90deg,#030A1Ff2 0%,#030A1Fcc 45%,#030A1F22 100%)"></div>
 <div style="position:absolute;left:72px;top:150px;color:#fff">
 <div class="en" style="font-size:16px;font-weight:700;color:#38D0F5">HAMSTER ROBOT CREATIVE PROJECT</div>
@@ -137,9 +138,10 @@ section(1, '프로젝트 소개', '우리는 왜 로켓 부품을 배달할까�
 page(f'''<div class="body" style="top:160px;display:grid;grid-template-columns:1.25fr 1fr;gap:28px">
 <div class="card" style="padding:34px 36px;border-left:5px solid #0B5FD7"><div class="num">MISSION BRIEFING</div>
 <div style="font-size:22px;line-height:1.85;margin-top:16px;color:#1E2F4F">“경남 곳곳의 부품 업체에서 누리호 같은 로켓의 부품 36개가 완성됐다!<br>그런데 택배 트럭이 모두 멈춰 버렸다.<br><br>우리 모둠의 <b style="color:#0B5FD7">햄스터봇 택배로봇 2대</b>가 부품을 <b style="color:#0B5FD7">고흥 나로우주센터 발사대</b>까지 배달해야 한다. 부품이 하나씩 도착할 때마다 전자칠판의 로켓이 조립되고, 36개가 모두 모이면 <b style="color:#0B5FD7">인공위성을 실은 로켓</b>이 우주로 발사된다!”</div></div>
-<div class="grid" style="grid-template-rows:repeat(4,1fr);gap:12px">
-{''.join(f'<div class="card" style="padding:14px 20px;display:flex;align-items:center;gap:18px"><div class="en" style="font-size:26px;font-weight:800;color:#0B5FD7;width:44px">{a}</div><div><div style="font-size:22px;font-weight:900">{b}</div><div style="font-size:16px;color:#5A6B85">{c}</div></div></div>' for a,b,c in [('01','조사','우리 구역 부품을 만드는 진짜 경남 회사 찾기'),('02','지도','전지에 우리 구역 지도 그리고 꾸미기'),('03','코딩','햄스터봇 2대가 업체에서 발사대까지 가게 만들기'),('04','발사','36개 부품을 모아 인공위성 발사!')])}
-</div></div>''', sec=1, title='미션 이야기', lead='선생님이 읽어 주세요')
+<div style="display:flex;flex-direction:column;gap:10px"><img src="{A}ai_mission.jpg" style="width:100%;height:180px;object-fit:cover;border-radius:6px">
+<div class="grid" style="grid-template-rows:repeat(4,1fr);gap:8px;flex:1">
+{''.join(f'<div class="card" style="padding:6px 20px;display:flex;align-items:center;gap:18px"><div class="en" style="font-size:26px;font-weight:800;color:#0B5FD7;width:44px">{a}</div><div><div style="font-size:22px;font-weight:900">{b}</div><div style="font-size:16px;color:#5A6B85">{c}</div></div></div>' for a,b,c in [('01','조사','우리 구역 부품을 만드는 진짜 경남 회사 찾기'),('02','지도','전지에 우리 구역 지도 그리고 꾸미기'),('03','코딩','햄스터봇 2대가 업체에서 발사대까지 가게 만들기'),('04','발사','36개 부품을 모아 인공위성 발사!')])}
+</div></div></div>''', sec=1, title='미션 이야기', lead='선생님이 읽어 주세요')
 
 page('<div class="body">' + cards([
     ('2026. 10', '누리호 5차 발사', '경남 기업 11곳이 부품과 시험에 참여했어요.'),
