@@ -2,15 +2,15 @@
 import json, re, sys
 D = json.load(open('text.json'))
 COMMIT = sys.argv[1]; PREFIX = sys.argv[2] if len(sys.argv) > 2 else 'e'
-PT = 0.75; INSET = 7.2  # Google Slides 기본 안쪽 여백(pt)
+PT = 0.5625; INSET = 7.2  # Google Slides 기본 안쪽 여백(pt)
 def col(c):
     v = [float(x) for x in re.findall(r'[\d.]+', c)][:3]
     return {'opaqueColor': {'rgbColor': {k: round(x / 255, 2) for k, x in zip(('red', 'green', 'blue'), v) if x}}}
 def r1(x): return round(x, 1)
 out = {}
 for si, k in enumerate(sorted(D)):
-    n = int(k[1:]); sid = f'{PREFIX}s{n:02d}'
-    R = [{'createSlide': {'objectId': sid, 'insertionIndex': n - 1, 'slideLayoutReference': {'predefinedLayout': 'BLANK'}}},
+    n = int(k[1:]); sid = f'{PREFIX}_s{n:02d}'
+    R = [{'createSlide': {'objectId': sid, 'slideLayoutReference': {'predefinedLayout': 'BLANK'}}},
          {'createImage': {'objectId': f'{sid}bg', 'url': f'https://raw.githubusercontent.com/buildergarlic/swa-rocket-project/{COMMIT}/slides/bg/{k}.jpg',
           'elementProperties': {'pageObjectId': sid, 'size': {'width': {'magnitude': 720, 'unit': 'PT'}, 'height': {'magnitude': 405, 'unit': 'PT'}},
                                 'transform': {'scaleX': 1, 'scaleY': 1, 'unit': 'PT'}}}}]
@@ -48,7 +48,7 @@ for si, k in enumerate(sorted(D)):
                 if r['s'] != base['s']: d['fontSize'] = {'magnitude': round(r['s'] * PT * 2) / 2, 'unit': 'PT'}; f.append('fontSize')
                 if r['f'] != base['f']: d['fontFamily'] = r['f']; f.append('fontFamily')
                 R.append({'updateTextStyle': {'objectId': oid, 'textRange': {'type': 'FIXED_RANGE', 'startIndex': seg_start, 'endIndex': seg_end}, 'style': d, 'fields': ','.join(f)}})
-        ps = {'lineSpacing': round(b['lh'] / 1.45 * 100), 'spaceAbove': {'magnitude': 0, 'unit': 'PT'}, 'spaceBelow': {'magnitude': 0, 'unit': 'PT'}}
+        ps = {'lineSpacing': round(b['lh'] / 1.16 * 100), 'spaceAbove': {'magnitude': 0, 'unit': 'PT'}, 'spaceBelow': {'magnitude': 0, 'unit': 'PT'}}
         if al in ('center', 'right', 'end'): ps['alignment'] = 'CENTER' if al == 'center' else 'END'
         multi = '\n' in text.strip()
         if not multi: ps.pop('lineSpacing')
@@ -56,5 +56,22 @@ for si, k in enumerate(sorted(D)):
         if ps: R.append({'updateParagraphStyle': {'objectId': oid, 'style': ps, 'fields': ','.join(ps)}})
     out[n] = R
 json.dump(out, open('gslides_req.json', 'w'), ensure_ascii=False, separators=(',', ':'))
+# 묶음 나누기
+import os
+os.makedirs('gs_batches', exist_ok=True)
+for f in os.listdir('gs_batches'): os.remove('gs_batches/' + f)
+cur = []; size = 0; bi = 0
+def flush():
+    global cur, size, bi
+    if cur: json.dump(cur, open(f'gs_batches/b{bi:02d}.json', 'w'), ensure_ascii=False, separators=(',', ':')); bi += 1
+    cur = []; size = 0
+for n in sorted(out):
+    for r in out[n]:
+        l = len(json.dumps(r, ensure_ascii=False, separators=(',', ':')))
+        if size + l > 38000 and 'createSlide' in r: flush()
+        if size + l > 45000: flush()
+        cur.append(r); size += l
+flush()
+print('batches', bi)
 tot = sum(len(json.dumps(v, ensure_ascii=False, separators=(',', ':'))) for v in out.values())
 print('total chars', tot, 'requests', sum(len(v) for v in out.values()))
